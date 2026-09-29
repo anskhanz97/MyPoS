@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "target": "ES2023",
+        "useDefineForClassFields": true,
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "esModuleInterop": true,
+        "lib": ["ES2023", "DOM", "DOM.Iterable"],
+        "types": ["node", "vite/client", "vitest/globals"]
+    },
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.vue",
+        "tests/frontend/**/*.ts",
+        "vite.config.ts",
+        "vitest.config.ts"
+    ]
+}

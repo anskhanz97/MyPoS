@@ -1,0 +1,184 @@
+{
+  "schema_version": 2,
+  "currency": "PKR",
+  "rounding_mode": "HALF_UP",
+  "cases": [
+    {
+      "id": "A001",
+      "operation": "exclusive_percentage_tax",
+      "input": {"quantity": "2.500000", "unit_price": "10.0000", "discount": "2.50", "tax_rate_percent": "18.000000"},
+      "expected": {"pre_discount": "25.00", "taxable_net": "22.50", "tax": "4.05", "gross": "26.55"}
+    },
+    {
+      "id": "A002",
+      "operation": "inclusive_percentage_tax",
+      "input": {"quantity": "1.000000", "unit_price": "118.0000", "discount": "0.00", "tax_rate_percent": "18.000000"},
+      "expected": {"inclusive_after_discount": "118.00", "net": "100.00", "tax": "18.00", "gross": "118.00"}
+    },
+    {
+      "id": "A003",
+      "operation": "inclusive_percentage_tax",
+      "input": {"quantity": "1.000000", "unit_price": "118.0000", "discount": "11.80", "tax_rate_percent": "18.000000"},
+      "expected": {"inclusive_after_discount": "106.20", "net": "90.00", "tax": "16.20", "gross": "106.20"}
+    },
+    {
+      "id": "A004",
+      "operation": "largest_remainder_allocation",
+      "input": {
+        "amount": "0.05",
+        "lines": [
+          {"line_id": "00000000-0000-7000-8000-000000000001", "sequence": 1, "weight": "1.0000"},
+          {"line_id": "00000000-0000-7000-8000-000000000002", "sequence": 2, "weight": "1.0000"},
+          {"line_id": "00000000-0000-7000-8000-000000000003", "sequence": 3, "weight": "1.0000"}
+        ]
+      },
+      "expected": {
+        "allocations": [
+          {"line_id": "00000000-0000-7000-8000-000000000001", "amount": "0.02"},
+          {"line_id": "00000000-0000-7000-8000-000000000002", "amount": "0.02"},
+          {"line_id": "00000000-0000-7000-8000-000000000003", "amount": "0.01"}
+        ],
+        "sum": "0.05"
+      }
+    },
+    {
+      "id": "A005",
+      "operation": "split_tender_settlement",
+      "input": {
+        "sale_total": "100.00",
+        "tenders": [
+          {"type": "external_card", "amount": "30.00"},
+          {"type": "cash", "amount": "100.00"}
+        ],
+        "cash_change": "30.00"
+      },
+      "expected": {"settled": true, "settled_amount": "100.00", "expected_drawer_increase": "70.00"}
+    },
+    {
+      "id": "A006",
+      "operation": "cumulative_partial_return",
+      "input": {"original_quantity": "3.000000", "original_refundable": "10.00", "return_quantities_in_order": ["1.000000", "1.000000", "1.000000"]},
+      "expected": {"refunds_in_order": ["3.33", "3.34", "3.33"], "total_refunded": "10.00", "remaining": "0.00"}
+    },
+    {
+      "id": "A007",
+      "operation": "unit_conversion",
+      "input": {"sale_quantity": "2.000000", "base_per_sale_unit": "12.00000000"},
+      "expected": {"base_quantity": "24.000000"}
+    },
+    {
+      "id": "A008",
+      "operation": "unit_conversion",
+      "input": {"sale_quantity": "1.250000", "base_per_sale_unit": "1000.00000000"},
+      "expected": {"base_quantity": "1250.000000"}
+    },
+    {
+      "id": "A009",
+      "operation": "moving_weighted_average_positive_stock",
+      "input": {"old_quantity": "10.000000", "old_average": "100.000000", "received_quantity": "5.000000", "landed_unit_cost": "130.000000"},
+      "expected": {"new_quantity": "15.000000", "new_average": "110.000000"}
+    },
+    {
+      "id": "A010",
+      "operation": "business_date",
+      "input": {"utc_instant": "2026-09-28T20:30:00Z", "timezone": "Asia/Karachi", "cutoff_local": "02:00:00"},
+      "expected": {"local_instant": "2026-09-29T01:30:00+05:00", "business_date": "2026-09-28"}
+    },
+    {
+      "id": "A011",
+      "operation": "business_date",
+      "input": {"utc_instant": "2026-09-28T21:30:00Z", "timezone": "Asia/Karachi", "cutoff_local": "02:00:00"},
+      "expected": {"local_instant": "2026-09-29T02:30:00+05:00", "business_date": "2026-09-29"}
+    },
+    {
+      "id": "A012",
+      "operation": "exchange_difference",
+      "input": {"new_sale_total": "150.00", "return_refund_total": "110.00"},
+      "expected": {"difference": "40.00", "direction": "customer_pays"}
+    },
+    {
+      "id": "A013",
+      "operation": "exchange_difference",
+      "input": {"new_sale_total": "90.00", "return_refund_total": "110.00"},
+      "expected": {"difference": "-20.00", "direction": "merchant_refunds"}
+    },
+    {
+      "id": "A014",
+      "operation": "payroll_net",
+      "input": {"gross_pay": "50000.00", "allowances": "2500.00", "deductions": "3000.00", "advance_recovery": "1000.00", "statutory_input": "1500.00"},
+      "expected": {"net_pay": "47000.00"}
+    },
+    {
+      "id": "A015",
+      "operation": "loyalty_earn_floor_4",
+      "input": {"eligible_net_spend": "123.45", "points_per_pkr": "0.012345"},
+      "expected": {"raw_points": "1.52399025", "posted_points": "1.5239"}
+    },
+    {
+      "id": "A016",
+      "operation": "purchase_receipt_carton_moving_average",
+      "input": {"old_quantity_base": "10.000000", "old_average": "100.000000", "purchase_quantity_uom": "1.000000", "factor_to_base": "12.000000", "unit_cost_uom": "1200.000000", "landed_cost_total": "120.000000", "recoverable_tax_total": "180.000000"},
+      "expected": {"received_quantity_base": "12.000000", "inventory_unit_cost_base": "110.000000", "new_quantity": "22.000000", "new_inventory_value": "2320.000000", "new_average": "105.454545", "supplier_charge": "1500.00"}
+    },
+    {
+      "id": "A017",
+      "operation": "fractional_purchase_receipt",
+      "input": {"purchase_quantity_uom": "1.250000", "factor_to_base": "1000.000000", "unit_cost_uom": "500.000000", "landed_cost_total": "25.000000"},
+      "expected": {"received_quantity_base": "1250.000000", "inventory_value": "650.000000", "inventory_unit_cost_base": "0.520000"}
+    },
+    {
+      "id": "A018",
+      "operation": "negative_stock_partial_resolution",
+      "input": {"old_quantity": "-5.000000", "provisional_average": "100.000000", "received_quantity": "3.000000", "actual_unit_cost": "130.000000"},
+      "expected": {"new_quantity": "-2.000000", "remaining_average": "100.000000", "resolved_negative_quantity": "3.000000", "cost_adjustment_value": "90.000000", "cost_state": "provisional"}
+    },
+    {
+      "id": "A019",
+      "operation": "negative_stock_cross_zero",
+      "input": {"old_quantity": "-3.000000", "provisional_average": "110.000000", "received_quantity": "5.000000", "actual_unit_cost": "80.000000"},
+      "expected": {"new_quantity": "2.000000", "new_average": "80.000000", "new_inventory_value": "160.000000", "resolved_negative_quantity": "3.000000", "cost_adjustment_value": "-90.000000", "cost_state": "final"}
+    },
+    {
+      "id": "A020",
+      "operation": "purchase_receipt_idempotency",
+      "input": {"idempotency_key": "00000000-0000-7000-8000-000000000191", "identical_submissions": 2},
+      "expected": {"receipt_count": 1, "stock_movement_count": 1, "cost_entry_count": 1, "supplier_charge_count": 1, "outbox_event_count": 1, "second_submission_replayed": true}
+    },
+    {
+      "id": "A021",
+      "operation": "independent_catalog_transfer_valuation",
+      "input": {"source_quantity": "2.000000", "source_unit_cost": "120.000000", "factor_to_destination_base": "12.000000"},
+      "expected": {"destination_quantity": "24.000000", "destination_unit_cost": "10.000000", "value_conserved": "240.000000"}
+    },
+    {
+      "id": "A022",
+      "operation": "latest_receipt_reversal",
+      "input": {"previous_quantity": "10.000000", "previous_value": "1000.000000", "receipt_quantity": "5.000000", "receipt_value": "650.000000", "later_cost_entry_count": 0},
+      "expected": {"resulting_quantity": "10.000000", "resulting_value": "1000.000000", "resulting_average": "100.000000", "append_only_reversal": true}
+    },
+    {
+      "id": "A023",
+      "operation": "cumulative_purchase_return_credit",
+      "input": {"receipt_quantity_base": "12.000000", "supplier_charge_total": "1500.00", "return_quantities_base_in_order": ["3.000000", "3.000000"]},
+      "expected": {"credits_in_order": ["375.00", "375.00"], "total_credit": "750.00", "remaining_eligible_quantity": "6.000000"}
+    },
+    {
+      "id": "A024",
+      "operation": "supplier_balance_projection",
+      "input": {"charges": ["1500.00"], "confirmed_credits": ["375.00"], "payments": ["500.00"], "allocations": ["400.00"]},
+      "expected": {"balance": "625.00", "unallocated_payments": "100.00"}
+    },
+    {
+      "id": "A025",
+      "operation": "supplier_payment_reversal",
+      "input": {"opening_balance": "625.00", "payment_reversal": "500.00", "allocation_reversal": "400.00", "previous_unallocated": "100.00"},
+      "expected": {"balance": "1125.00", "net_allocated": "0.00", "unallocated_payments": "0.00", "append_only_reversal": true}
+    },
+    {
+      "id": "A026",
+      "operation": "cash_session_expected",
+      "input": {"opening_float": "10000.00", "signed_cash_movements": ["50.00", "-20.00", "-30.00", "70.00", "-10.00"], "external_tenders": ["1500.00"], "counted_amount": "10065.00"},
+      "expected": {"expected_amount": "10060.00", "variance_amount": "5.00", "external_tender_drawer_effect": "0.00"}
+    }
+  ]
+}

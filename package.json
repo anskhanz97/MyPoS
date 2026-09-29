@@ -1,0 +1,41 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite",
+        "format": "prettier --write resources tests/browser *.config.* package.json tsconfig.json",
+        "format:check": "prettier --check resources tests/browser *.config.* package.json tsconfig.json",
+        "lint": "eslint resources/js tests/browser",
+        "test": "vitest run",
+        "test:browser": "playwright test",
+        "typecheck": "vue-tsc --noEmit"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "@playwright/test": "1.63.0",
+        "@tailwindcss/vite": "^4.0.0",
+        "@types/node": "24.10.9",
+        "@vitejs/plugin-vue": "6.0.9",
+        "concurrently": "^10.0.3",
+        "eslint": "10.0.1",
+        "eslint-plugin-vue": "10.11.1",
+        "globals": "17.12.0",
+        "laravel-vite-plugin": "^3.1",
+        "prettier": "3.9.9",
+        "tailwindcss": "^4.0.0",
+        "typescript": "6.0.3",
+        "typescript-eslint": "8.71.0",
+        "vite": "8.3.1",
+        "vitest": "5.0.2",
+        "vue-tsc": "3.3.11"
+    },
+    "optionalDependencies": {
+        "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "decimal.js": "10.6.0",
+        "vue": "3.5.43"
+    }
+}

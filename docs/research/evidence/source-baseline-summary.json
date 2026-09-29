@@ -1,0 +1,147 @@
+{
+  "generated_at_utc": "2026-09-28T18:14:29.358984+00:00",
+  "projects": [
+    {
+      "project": "api-retail-project",
+      "git": {
+        "root": "C:/XEPOS/api-retail-project",
+        "head": "d1aac368ed2cc4af7eed91ddd7bf49b81b2bda79",
+        "branch": "Ans-Khan-dev",
+        "status_short": [],
+        "origin": "https://github.com/xegroup/api-retail-project.git"
+      },
+      "aggregate_sha256": "59fa226ea22db685262538c6e70996055eb6f3caa965603c8fea07f555306ed7",
+      "file_count": 1268,
+      "category_counts": {
+        "commands": 6,
+        "controllers": 158,
+        "jobs": 29,
+        "middleware": 3,
+        "migrations": 256,
+        "models": 140,
+        "observers": 34,
+        "other": 432,
+        "requests": 108,
+        "routes": 4,
+        "services": 68,
+        "tests": 30
+      },
+      "models": 138,
+      "backend_route_statements": 833,
+      "frontend_paths": 0,
+      "migrations": 257,
+      "screens": 0,
+      "tests": 29
+    },
+    {
+      "project": "portal-retail-xepos",
+      "git": {
+        "root": "C:/XEPOS/portal-retail-xepos",
+        "head": "cd247bab6806b437b4c2247d7149801f0c3cde1e",
+        "branch": "Ans-Khan-dev",
+        "status_short": [],
+        "origin": "https://github.com/xegroup/portal-retail-xepos.git"
+      },
+      "aggregate_sha256": "1b04dd9067bb7563c54af68fef3b45a02bf4d0afa5108c5c7d1374545ded8523",
+      "file_count": 587,
+      "category_counts": {
+        "frontend_routes": 2,
+        "other": 144,
+        "screens_components": 441
+      },
+      "models": 0,
+      "backend_route_statements": 0,
+      "frontend_paths": 267,
+      "migrations": 0,
+      "screens": 391,
+      "tests": 0
+    },
+    {
+      "project": "xepos-hq-hospitality",
+      "git": {
+        "root": "C:/XEPOS/xepos-hq-hospitality",
+        "head": "c46ade7f5cf83389ab22fa8844ef33af5edb8cf9",
+        "branch": "Ans-Khan-dev",
+        "status_short": [],
+        "origin": "https://github.com/xegroup/xepos-hq-hospitality.git"
+      },
+      "aggregate_sha256": "69d062591f726999db833ee0a7ca7b728674f96e2f9df365dbf3d02cd0a1af34",
+      "file_count": 1549,
+      "category_counts": {
+        "commands": 27,
+        "controllers": 101,
+        "frontend_routes": 1,
+        "jobs": 19,
+        "middleware": 12,
+        "migrations": 258,
+        "models": 123,
+        "observers": 3,
+        "other": 416,
+        "requests": 149,
+        "routes": 5,
+        "screens_components": 355,
+        "services": 44,
+        "tests": 36
+      },
+      "models": 123,
+      "backend_route_statements": 550,
+      "frontend_paths": 176,
+      "migrations": 259,
+      "screens": 307,
+      "tests": 32
+    },
+    {
+      "project": "api-loyalty-xepos",
+      "git": {
+        "root": "C:/XEPOS/api-loyalty-xepos",
+        "head": "650976057a5ae296b7823da6743028895e25d2b7",
+        "branch": "Ans-Khan-dev",
+        "status_short": [],
+        "origin": "https://github.com/xegroup/api-loyalty-xepos.git"
+      },
+      "aggregate_sha256": "67e3b30df323fff5841e8a42db4579c241a19cad6b088aed98828868d1843cfa",
+      "file_count": 263,
+      "category_counts": {
+        "commands": 21,
+        "controllers": 25,
+        "middleware": 5,
+        "migrations": 46,
+        "models": 17,
+        "observers": 1,
+        "other": 73,
+        "routes": 3,
+        "services": 32,
+        "tests": 40
+      },
+      "models": 17,
+      "backend_route_statements": 127,
+      "frontend_paths": 0,
+      "migrations": 46,
+      "screens": 0,
+      "tests": 39
+    },
+    {
+      "project": "loyalty-portal",
+      "git": {
+        "root": "C:/XEPOS/loyalty-portal",
+        "head": "834c5b2b2fa73005198223a621a418dd3e6b28a8",
+        "branch": "Ans-Khan-dev",
+        "status_short": [],
+        "origin": "https://github.com/xegroup/loyalty-portal.git"
+      },
+      "aggregate_sha256": "72e9cf06a1d9b98bbe877b997994babc8beaf719eec8e5afc9de305b59fb7f57",
+      "file_count": 154,
+      "category_counts": {
+        "other": 62,
+        "screens_components": 91,
+        "services": 1
+      },
+      "models": 0,
+      "backend_route_statements": 0,
+      "frontend_paths": 0,
+      "migrations": 0,
+      "screens": 18,
+      "tests": 0
+    }
+  ]
+}

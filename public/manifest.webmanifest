@@ -1,0 +1,9 @@
+{
+    "name": "MyPoS Counter",
+    "short_name": "MyPoS",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f4f1e8",
+    "theme_color": "#153f3a",
+    "description": "Counter POS with durable cash-only outage mode"
+}

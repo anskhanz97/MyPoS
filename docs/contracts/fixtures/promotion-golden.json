@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "currency": "PKR",
+  "rounding_mode": "HALF_UP",
+  "cases": [
+    {"id": "P001", "purpose": "same-priority exclusive rules choose the lowest payable result, then immutable rule ID", "expected_discount": "20.00"},
+    {"id": "P002", "purpose": "fractional quantity threshold is exact at 2.500000", "below_quantity": "2.499999", "at_quantity": "2.500000", "expected_at_discount": "2.50"},
+    {"id": "P003", "purpose": "quantity, buy-X-get-Y and coupon stack in frozen stage order without consuming the coupon during quote", "expected_discount": "75.00", "coupon_consumed": false},
+    {"id": "P004", "purpose": "five paisa cart discount uses stable largest remainder", "line_allocations": ["0.02", "0.02", "0.01"], "expected_sum": "0.05"},
+    {"id": "P005", "purpose": "partial refund uses cumulative entitlement from frozen line allocations", "original_quantity": "3.000000", "original_refundable": "10.00", "return_quantities": ["1.000000", "1.000000", "1.000000"], "refunds": ["3.33", "3.34", "3.33"]}
+  ]
+}
