@@ -19,7 +19,7 @@ class SecurityHeaders
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'Permissions-Policy' => 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
             'Cross-Origin-Opener-Policy' => 'same-origin',
-            'Content-Security-Policy' => "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: wss:",
+            'Content-Security-Policy' => $this->contentSecurityPolicy(),
         ];
 
         foreach ($headers as $name => $value) {
@@ -33,5 +33,38 @@ class SecurityHeaders
         $response->headers->remove('X-Powered-By');
 
         return $response;
+    }
+
+    private function contentSecurityPolicy(): string
+    {
+        $viteOrigin = $this->viteDevServerOrigin();
+        $developmentSource = $viteOrigin === null ? '' : " {$viteOrigin}";
+
+        return "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; img-src 'self' data: blob:{$developmentSource}; font-src 'self' data:{$developmentSource}; style-src 'self' 'unsafe-inline'{$developmentSource}; script-src 'self'{$developmentSource}; connect-src 'self' ws: wss:{$developmentSource}";
+    }
+
+    private function viteDevServerOrigin(): ?string
+    {
+        if (! app()->isLocal()) {
+            return null;
+        }
+
+        $url = config('app.vite_dev_server_url');
+
+        if (! is_string($url) || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+
+        $parts = parse_url($url);
+
+        if (! is_array($parts)
+            || ! isset($parts['scheme'], $parts['host'])
+            || ! in_array($parts['scheme'], ['http', 'https'], true)) {
+            return null;
+        }
+
+        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+
+        return $parts['scheme'].'://'.$parts['host'].$port;
     }
 }

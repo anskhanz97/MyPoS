@@ -1,102 +1,121 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from "vue";
+import {
+    computed,
+    defineAsyncComponent,
+    nextTick,
+    ref,
+    watch,
+    type Component,
+} from "vue";
 import AppButton from "../components/AppButton.vue";
 import AppDialog from "../components/AppDialog.vue";
 import AppToast from "../components/AppToast.vue";
 import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
-import AuthAccessPreview from "./AuthAccessPreview.vue";
-import CatalogPreview from "./CatalogPreview.vue";
-import CashSessionPreview from "./CashSessionPreview.vue";
-import CustomerPreview from "./CustomerPreview.vue";
-import DataTransferPreview from "./DataTransferPreview.vue";
-import FinancePreview from "./FinancePreview.vue";
-import FiscalPreview from "./FiscalPreview.vue";
-import InventoryPreview from "./InventoryPreview.vue";
-import IntegrationHubPreview from "./IntegrationHubPreview.vue";
-import LoyaltyPreview from "./LoyaltyPreview.vue";
-import NotificationPreview from "./NotificationPreview.vue";
-import PlatformSubscriptionPreview from "./PlatformSubscriptionPreview.vue";
-import PayrollPreview from "./PayrollPreview.vue";
-import PricingPreview from "./PricingPreview.vue";
-import PublicLoyaltyPreview from "./PublicLoyaltyPreview.vue";
-import PurchasingPreview from "./PurchasingPreview.vue";
-import RegisterSettingsPreview from "./RegisterSettingsPreview.vue";
-import ReportingPreview from "./ReportingPreview.vue";
-import SaleReturnsPreview from "./SaleReturnsPreview.vue";
-import TenantSetupPreview from "./TenantSetupPreview.vue";
-import TransferCountPreview from "./TransferCountPreview.vue";
-import WorkforcePreview from "./WorkforcePreview.vue";
 
-const props = withDefaults(defineProps<{ publicView?: boolean }>(), {
-    publicView: false,
-});
+const props = withDefaults(
+    defineProps<{ publicView?: boolean; activeSection?: string }>(),
+    {
+        publicView: false,
+        activeSection: "Components",
+    },
+);
+
+const previewComponents: Record<string, Component> = {
+    Tenancy: defineAsyncComponent(() => import("./TenantSetupPreview.vue")),
+    Access: defineAsyncComponent(() => import("./AuthAccessPreview.vue")),
+    Platform: defineAsyncComponent(
+        () => import("./PlatformSubscriptionPreview.vue"),
+    ),
+    Registers: defineAsyncComponent(
+        () => import("./RegisterSettingsPreview.vue"),
+    ),
+    Catalog: defineAsyncComponent(() => import("./CatalogPreview.vue")),
+    Pricing: defineAsyncComponent(() => import("./PricingPreview.vue")),
+    Customers: defineAsyncComponent(() => import("./CustomerPreview.vue")),
+    Inventory: defineAsyncComponent(() => import("./InventoryPreview.vue")),
+    "Transfers & counts": defineAsyncComponent(
+        () => import("./TransferCountPreview.vue"),
+    ),
+    Purchasing: defineAsyncComponent(() => import("./PurchasingPreview.vue")),
+    "Cash control": defineAsyncComponent(
+        () => import("./CashSessionPreview.vue"),
+    ),
+    Returns: defineAsyncComponent(() => import("./SaleReturnsPreview.vue")),
+    Loyalty: defineAsyncComponent(() => import("./LoyaltyPreview.vue")),
+    Workforce: defineAsyncComponent(() => import("./WorkforcePreview.vue")),
+    Payroll: defineAsyncComponent(() => import("./PayrollPreview.vue")),
+    Finance: defineAsyncComponent(() => import("./FinancePreview.vue")),
+    Reports: defineAsyncComponent(() => import("./ReportingPreview.vue")),
+    "Data transfer": defineAsyncComponent(
+        () => import("./DataTransferPreview.vue"),
+    ),
+    Notifications: defineAsyncComponent(
+        () => import("./NotificationPreview.vue"),
+    ),
+    Integrations: defineAsyncComponent(
+        () => import("./IntegrationHubPreview.vue"),
+    ),
+    Fiscal: defineAsyncComponent(() => import("./FiscalPreview.vue")),
+    "Member profile": defineAsyncComponent(
+        () => import("./PublicLoyaltyPreview.vue"),
+    ),
+};
 
 const customerName = ref("Ayesha Khan");
 const amount = ref("1250.00");
 const quantity = ref("2.500000");
-const activeTab = ref("Components");
+const publicTab = ref("Components");
 const dialog = ref<InstanceType<typeof AppDialog> | null>(null);
-const tabs = computed(() =>
+const tabs = ["Components", "States", "Shell notes"];
+const effectiveSection = computed(() =>
+    props.publicView ? publicTab.value : props.activeSection,
+);
+const currentPreview = computed(() =>
     props.publicView
-        ? ["Components", "States", "Shell notes"]
-        : [
-              "Components",
-              "States",
-              "Tenancy",
-              "Access",
-              "Platform",
-              "Registers",
-              "Catalog",
-              "Pricing",
-              "Customers",
-              "Inventory",
-              "Transfers & counts",
-              "Purchasing",
-              "Cash control",
-              "Returns",
-              "Loyalty",
-              "Workforce",
-              "Payroll",
-              "Finance",
-              "Reports",
-              "Data transfer",
-              "Notifications",
-              "Integrations",
-              "Fiscal",
-              "Shell notes",
-          ],
+        ? effectiveSection.value === "Components"
+            ? previewComponents["Member profile"]
+            : undefined
+        : previewComponents[effectiveSection.value],
 );
 
 watch(
     () => props.publicView,
     () => {
-        if (!tabs.value.includes(activeTab.value))
-            activeTab.value = "Components";
+        if (!tabs.includes(publicTab.value)) {
+            publicTab.value = "Components";
+        }
     },
 );
 
 async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
-    const last = tabs.value.length - 1;
+    const last = tabs.length - 1;
     const next =
         event.key === "Home"
             ? 0
             : event.key === "End"
               ? last
               : event.key === "ArrowRight"
-                ? (index + 1) % tabs.value.length
-                : (index - 1 + tabs.value.length) % tabs.value.length;
-    activeTab.value = tabs.value[next] ?? "Components";
+                ? (index + 1) % tabs.length
+                : (index - 1 + tabs.length) % tabs.length;
+    publicTab.value = tabs[next] ?? "Components";
     await nextTick();
-    document.getElementById(`tab-${activeTab.value}`)?.focus();
+    document.getElementById(`tab-${publicTab.value}`)?.focus();
 }
 </script>
 
 <template>
     <div class="gallery">
-        <header class="page-heading">
+        <header
+            v-if="
+                ['Components', 'States', 'Shell notes'].includes(
+                    effectiveSection,
+                )
+            "
+            class="page-heading"
+        >
             <div>
                 <p class="kicker">Design system reference</p>
                 <h1>
@@ -117,15 +136,20 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
             <StatusBadge tone="info">Foundation preview</StatusBadge>
         </header>
 
-        <div class="tabs" role="tablist" aria-label="Gallery sections">
+        <div
+            v-if="publicView"
+            class="tabs"
+            role="tablist"
+            aria-label="Gallery sections"
+        >
             <button
                 v-for="tab in tabs"
                 :id="`tab-${tab}`"
                 :key="tab"
                 role="tab"
-                :aria-selected="activeTab === tab"
-                :tabindex="activeTab === tab ? 0 : -1"
-                @click="activeTab = tab"
+                :aria-selected="publicTab === tab"
+                :tabindex="publicTab === tab ? 0 : -1"
+                @click="publicTab = tab"
                 @keydown="moveTab($event, tabs.indexOf(tab))"
             >
                 {{ tab }}
@@ -133,8 +157,7 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
         </div>
 
         <section
-            v-if="!publicView"
-            v-show="activeTab === 'Components'"
+            v-if="!publicView && effectiveSection === 'Components'"
             class="gallery-section"
             aria-labelledby="actions-title"
         >
@@ -161,95 +184,19 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
             </div>
         </section>
 
-        <TenantSetupPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Tenancy'"
-        />
-
-        <AuthAccessPreview v-if="!publicView" v-show="activeTab === 'Access'" />
-
-        <PlatformSubscriptionPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Platform'"
-        />
-
-        <RegisterSettingsPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Registers'"
-        />
-
-        <CatalogPreview v-if="!publicView" v-show="activeTab === 'Catalog'" />
-
-        <PricingPreview v-if="!publicView" v-show="activeTab === 'Pricing'" />
-
-        <CustomerPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Customers'"
-        />
-
-        <InventoryPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Inventory'"
-        />
-
-        <TransferCountPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Transfers & counts'"
-        />
-
-        <PurchasingPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Purchasing'"
-        />
-
-        <CashSessionPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Cash control'"
-        />
-
-        <SaleReturnsPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Returns'"
-        />
-
-        <LoyaltyPreview v-if="!publicView" v-show="activeTab === 'Loyalty'" />
-
-        <WorkforcePreview
-            v-if="!publicView"
-            v-show="activeTab === 'Workforce'"
-        />
-
-        <PayrollPreview v-if="!publicView" v-show="activeTab === 'Payroll'" />
-
-        <FinancePreview v-if="!publicView" v-show="activeTab === 'Finance'" />
-
-        <ReportingPreview v-if="!publicView" v-show="activeTab === 'Reports'" />
-
-        <DataTransferPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Data transfer'"
-        />
-
-        <NotificationPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Notifications'"
-        />
-
-        <IntegrationHubPreview
-            v-if="!publicView"
-            v-show="activeTab === 'Integrations'"
-        />
-
-        <FiscalPreview v-if="!publicView" v-show="activeTab === 'Fiscal'" />
-
-        <PublicLoyaltyPreview
-            v-if="publicView"
-            v-show="activeTab === 'Components'"
-        />
+        <Suspense v-if="currentPreview">
+            <component :is="currentPreview" />
+            <template #fallback>
+                <StatePanel
+                    state="loading"
+                    title="Opening workspace"
+                    message="The selected tools are being prepared."
+                />
+            </template>
+        </Suspense>
 
         <section
-            v-if="!publicView"
-            v-show="activeTab === 'Components'"
+            v-if="!publicView && effectiveSection === 'Components'"
             class="gallery-section"
             aria-labelledby="fields-title"
         >
@@ -301,8 +248,7 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
         </section>
 
         <section
-            v-if="!publicView"
-            v-show="activeTab === 'Components'"
+            v-if="!publicView && effectiveSection === 'Components'"
             class="gallery-section"
             aria-labelledby="table-title"
         >
@@ -353,7 +299,7 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
         </section>
 
         <section
-            v-show="activeTab === 'States'"
+            v-if="effectiveSection === 'States'"
             class="gallery-section"
             aria-labelledby="states-title"
         >
@@ -384,8 +330,7 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
         </section>
 
         <section
-            v-if="!publicView"
-            v-show="activeTab === 'States'"
+            v-if="!publicView && effectiveSection === 'States'"
             class="gallery-section"
             aria-labelledby="feedback-title"
         >
@@ -410,7 +355,7 @@ async function moveTab(event: KeyboardEvent, index: number): Promise<void> {
         </section>
 
         <section
-            v-show="activeTab === 'Shell notes'"
+            v-if="effectiveSection === 'Shell notes'"
             class="gallery-section"
             aria-labelledby="shell-notes-title"
         >

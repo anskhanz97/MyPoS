@@ -321,8 +321,8 @@ function selectView(next: "schedule" | "attendance" | "leave"): void {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: #daf2e5;
-    color: #155b37;
+    background: color-mix(in srgb, var(--accent) 18%, var(--surface));
+    color: var(--accent);
     font-weight: 700;
 }
 .avatar.blue {

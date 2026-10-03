@@ -21,6 +21,20 @@ class ProductionHardeningTest extends TestCase
             ->assertJsonMissing(['database', 'cache', 'scheduler']);
     }
 
+    public function test_local_app_allows_the_configured_vite_server_in_its_content_security_policy(): void
+    {
+        $this->app->detectEnvironment(fn (): string => 'local');
+        config()->set('app.vite_dev_server_url', 'http://127.0.0.1:5173');
+
+        $response = $this->get('/');
+        $policy = $response->headers->get('Content-Security-Policy');
+
+        $this->assertNotNull($policy);
+        $this->assertStringContainsString("script-src 'self' http://127.0.0.1:5173", $policy);
+        $this->assertStringContainsString("style-src 'self' 'unsafe-inline' http://127.0.0.1:5173", $policy);
+        $this->assertStringContainsString("frame-ancestors 'none'", $policy);
+    }
+
     public function test_readiness_is_secret_protected_and_fails_closed_on_stale_scheduler(): void
     {
         config()->set('operations.health_key', 'health-test-key');

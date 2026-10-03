@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#153f3a">
+        <meta name="theme-color" content="#171615">
         <link rel="manifest" href="/manifest.webmanifest">
         <title>{{ config('app.name') }}</title>
         <script src="/theme-bootstrap.js"></script>

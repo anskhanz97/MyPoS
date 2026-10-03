@@ -1,16 +1,18 @@
 # MyPoS project memory
 
-Last reconciled with the working tree and the complete `docs/` library on 2026-09-29.
+Last reconciled with the working tree and the complete `docs/` library on 2026-10-04.
 
 ## What this project is
 
 MyPoS is a multi-merchant, browser-based point-of-sale and operations platform for Pakistan. It replaces the old till-to-cloud split with one Laravel application: the browser is the till and the same server owns back-office workflows, reporting and integrations. It supports retail and hospitality-style product selling under one feature set, while recipes/kitchen production, reservations and delivery operations are explicitly excluded.
 
-The stack is Laravel 13/PHP 8.3, Vue 3/TypeScript, Tailwind CSS 4 and MySQL 8.4, with a database queue and IndexedDB for bounded offline cash sales. The interface has complete bright and dark themes that switch without a reload or loss of active work.
+The stack is Laravel 13/PHP 8.3, Vue 3/TypeScript, Tailwind CSS 4 and MySQL 8.4, with a database queue and IndexedDB for bounded offline cash sales. The interface has complete bright and dark copper themes that switch without a reload or loss of active work. Management uses an expanded-by-default two-stage navigation shell: a compact module rail opens a contextual page panel, which can be collapsed globally.
 
 ## Current state
 
 Tickets T001–T038 are implemented in the current working tree. T037 completed broad local acceptance; T038 subsequently added the merchant integration hub and optional SMS/WhatsApp receipt delivery. The repository has not yet received its first immutable Git commit, and the application is not approved for live merchant rollout.
+
+The current uncommitted UI pass replaces the former green theme with copper and neutral surfaces, moves management page navigation into the global two-stage sidebar, and lazy-loads feature previews. The initial production JavaScript entry is approximately 132 KB instead of 232 KB before gzip. Local Vite is pinned to `127.0.0.1:5173`, with a local-only Content Security Policy allowance. The repository CI workflow has been removed by explicit request; verification is currently local.
 
 Implemented capabilities include:
 
@@ -78,6 +80,8 @@ composer run dev
 ```
 
 Production uses separately supervised web, worker and scheduler processes. Locally, `composer run dev` starts Laravel, the queue listener, log viewer and Vite. Exercise scheduling with `php artisan schedule:work`.
+
+When running the two development processes separately, use `php artisan serve` and `npm run dev`, then open `http://127.0.0.1:8000`. Keep `APP_URL` and `VITE_DEV_SERVER_URL` on the matching loopback hosts shown in `.env.example`; mixing `localhost`, `127.0.0.1` and `[::1]` can prevent Vite assets from loading under the development security policy.
 
 ## Verification
 

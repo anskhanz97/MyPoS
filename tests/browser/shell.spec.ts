@@ -1,4 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openManagementSection(
+    page: Page,
+    group: string,
+    section: string,
+): Promise<void> {
+    await page
+        .getByRole("button", { name: `Open ${group} navigation` })
+        .click();
+    await page
+        .getByRole("navigation", { name: `${group} pages` })
+        .getByRole("button", { name: section, exact: true })
+        .click();
+}
 
 test("shell persists theme without losing populated form state or focus", async ({
     page,
@@ -154,14 +168,18 @@ test("semantic text pairs meet WCAG AA contrast in both themes", async ({
     }
 });
 
-test("tabs and approval dialog support keyboard interaction", async ({
+test("sidebar navigation collapses and the approval dialog supports keyboard interaction", async ({
     page,
 }) => {
     await page.goto("/");
-    const componentsTab = page.getByRole("tab", { name: "Components" });
-    await componentsTab.focus();
-    await page.keyboard.press("ArrowRight");
-    await expect(page.getByRole("tab", { name: "States" })).toBeFocused();
+    await expect(page.getByText("Workspace and system state")).toBeVisible();
+    await page.getByRole("button", { name: "Collapse navigation" }).click();
+    await expect(page.getByText("Workspace and system state")).toBeHidden();
+    await page
+        .getByRole("button", { name: "Open Overview navigation" })
+        .click();
+    await expect(page.getByText("Workspace and system state")).toBeVisible();
+    await openManagementSection(page, "Overview", "States");
     await expect(
         page.getByRole("heading", { name: "System states" }),
     ).toBeVisible();
@@ -192,7 +210,7 @@ test("cash control keeps the count blind, records handover, and reveals variance
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Cash control" }).click();
+    await openManagementSection(page, "Sell", "Cash control");
     await expect(
         page.getByRole("heading", {
             name: "Count what is there. Then compare.",
@@ -226,7 +244,7 @@ test("return workflow preserves original allocations and exposes approval and pe
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Returns" }).click();
+    await openManagementSection(page, "Sell", "Returns");
     await expect(
         page.getByRole("heading", { name: "Start with the original sale." }),
     ).toBeVisible();
@@ -260,7 +278,7 @@ test("tenant setup reviews and locks ownership while store switching clears tran
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Tenancy" }).click();
+    await openManagementSection(page, "Setup", "Tenancy");
     await page.getByLabel("Independent records").check();
     await page.getByRole("button", { name: "Continue to review" }).click();
     await page.getByRole("button", { name: "Activate and lock mode" }).click();
@@ -304,7 +322,7 @@ test("access preview preserves cart across staff switches and consumes one appro
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Access" }).click();
+    await openManagementSection(page, "Setup", "Access");
     await page.getByRole("button", { name: "Sign in securely" }).click();
     await expect(page.getByRole("alert")).toContainText(
         "at least 12 characters",
@@ -362,7 +380,7 @@ test("platform subscription preview preserves recovery access through restrictio
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Platform" }).click();
+    await openManagementSection(page, "Setup", "Platform");
     await expect(
         page.getByRole("heading", {
             name: "Renew service without mixing billing and sales.",
@@ -399,7 +417,7 @@ test("register provisioning shows one-time pairing, tab ownership, versioned set
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Registers" }).click();
+    await openManagementSection(page, "Setup", "Registers");
     await expect(
         page.getByRole("heading", { name: "Know which counter can sell." }),
     ).toBeVisible();
@@ -436,7 +454,7 @@ test("catalog preview searches structures, preserves archive context and renders
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Catalog" }).click();
+    await openManagementSection(page, "Products", "Catalog");
     await expect(
         page.getByRole("heading", {
             name: "One scan, an exact sellable item.",
@@ -483,7 +501,7 @@ test("pricing preview switches modes, explains quote allocations and renders bot
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Pricing" }).click();
+    await openManagementSection(page, "Products", "Pricing");
     await expect(
         page.getByRole("heading", { name: "Every discount explains itself." }),
     ).toBeVisible();
@@ -516,7 +534,7 @@ test("customer preview searches normalized contacts, validates capture and rende
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Customers" }).click();
+    await openManagementSection(page, "Customers", "Customers");
     await expect(
         page.getByRole("heading", {
             name: "Recognize the customer. Keep the sale optional.",
@@ -563,7 +581,7 @@ test("inventory preview exposes negative stock, append-only sources, reconciliat
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Inventory" }).click();
+    await openManagementSection(page, "Products", "Inventory");
     const inventory = page.locator(".inventory-preview");
     await expect(
         inventory.getByRole("heading", {
@@ -618,7 +636,7 @@ test("batch preview distinguishes expiry warnings from blocks and proposes FEFO 
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Inventory" }).click();
+    await openManagementSection(page, "Products", "Inventory");
     const inventory = page.locator(".inventory-preview");
     await expect(
         inventory.getByRole("heading", {
@@ -661,7 +679,7 @@ test("transfer and count preview resolves transit and preserves the live movemen
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Transfers & counts" }).click();
+    await openManagementSection(page, "Products", "Transfers & counts");
     const preview = page.locator(".transfer-count-preview");
     await expect(
         preview.getByRole("heading", {
@@ -707,7 +725,7 @@ test("purchasing preview separates planning from receipts and renders supplier h
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Purchasing" }).click();
+    await openManagementSection(page, "Products", "Purchasing");
     const preview = page.locator(".purchasing-preview");
     await expect(
         preview.getByRole("heading", {
@@ -747,7 +765,7 @@ test("receiving preview exposes atomic partial receipt and moving-average eviden
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Purchasing" }).click();
+    await openManagementSection(page, "Products", "Purchasing");
     const preview = page.locator(".purchasing-preview");
     const workbench = preview.locator(".receipt-workbench");
     await expect(
@@ -793,7 +811,7 @@ test("supplier return and payment workbench separates physical, credit and alloc
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Purchasing" }).click();
+    await openManagementSection(page, "Products", "Purchasing");
     const preview = page.locator(".purchasing-preview");
     const ledger = preview.locator(".supplier-ledger-workbench");
     await expect(
@@ -1120,7 +1138,7 @@ test("merchant-wide loyalty reserves online and explains spent-points return pol
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Loyalty", exact: true }).click();
+    await openManagementSection(page, "Customers", "Loyalty");
     const loyalty = page.locator(".loyalty-preview");
     await expect(
         loyalty.getByRole("heading", {
@@ -1198,7 +1216,7 @@ test("workforce schedule, clock and leave review remain clear in both themes", a
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Workforce", exact: true }).click();
+    await openManagementSection(page, "Team", "Workforce");
     const workforce = page.locator(".workforce");
     await expect(
         workforce.getByRole("heading", {
@@ -1234,7 +1252,7 @@ test("payroll review explains posting and recorded payout in both themes", async
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Payroll", exact: true }).click();
+    await openManagementSection(page, "Team", "Payroll");
     const payroll = page.locator(".payroll-preview");
     await expect(
         payroll.getByRole("heading", {
@@ -1264,7 +1282,7 @@ test("operational finance keeps corrections and settlement provenance visible", 
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Finance", exact: true }).click();
+    await openManagementSection(page, "Operations", "Finance");
     const finance = page.locator(".finance-preview");
     await expect(
         finance.getByRole("heading", {
@@ -1292,7 +1310,7 @@ test("standard reports explain totals and preserve personal filters", async ({
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Reports", exact: true }).click();
+    await openManagementSection(page, "Operations", "Reports");
     const report = page.locator(".report-preview");
     await expect(
         report.getByRole("heading", {
@@ -1324,7 +1342,7 @@ test("imports preserve dry-run evidence and exports show durable status", async 
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Data transfer", exact: true }).click();
+    await openManagementSection(page, "Operations", "Data transfer");
     const transfer = page.locator(".transfer-preview");
     await expect(
         transfer.getByRole("heading", { name: "Preview first. Commit once." }),
@@ -1355,7 +1373,7 @@ test("notification center separates operational alerts from receipt delivery", a
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Notifications", exact: true }).click();
+    await openManagementSection(page, "Operations", "Notifications");
     const center = page.locator(".notification-preview");
     await expect(
         center.getByRole("heading", {
@@ -1379,11 +1397,15 @@ test("notification center separates operational alerts from receipt delivery", a
     }
 });
 
-test("integration hub configures merchant services safely in both themes", async ({ page }) => {
+test("integration hub configures merchant services safely in both themes", async ({
+    page,
+}) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Integrations", exact: true }).click();
+    await openManagementSection(page, "Operations", "Integrations");
     const hub = page.locator(".integration-hub");
-    await expect(hub.getByRole("heading", { name: "Services belong to each merchant." })).toBeVisible();
+    await expect(
+        hub.getByRole("heading", { name: "Services belong to each merchant." }),
+    ).toBeVisible();
     await expect(hub.getByText("6/10")).toBeVisible();
     await hub.getByRole("button", { name: "Messages" }).click();
     await expect(hub.getByText("3 services")).toBeVisible();
@@ -1391,13 +1413,24 @@ test("integration hub configures merchant services safely in both themes", async
     const dialog = page.getByRole("dialog", { name: "Configure WhatsApp" });
     await expect(dialog.getByText("Template approval")).toBeVisible();
     await dialog.getByRole("button", { name: "Check configuration" }).click();
-    await expect(dialog.getByText("Sandbox ready. No external request or message was sent.")).toBeVisible();
-    await dialog.getByRole("button", { name: "Close integration settings" }).click();
+    await expect(
+        dialog.getByText(
+            "Sandbox ready. No external request or message was sent.",
+        ),
+    ).toBeVisible();
+    await dialog
+        .getByRole("button", { name: "Close integration settings" })
+        .click();
     await page.getByRole("button", { name: "Use dark mode" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(hub.getByRole("heading", { name: "Services belong to each merchant." })).toBeVisible();
+    await expect(
+        hub.getByRole("heading", { name: "Services belong to each merchant." }),
+    ).toBeVisible();
     if (process.env.CAPTURE_VISUAL_EVIDENCE === "1") {
-        await page.screenshot({ path: "docs/evidence/t038-integrations-dark.png", fullPage: true });
+        await page.screenshot({
+            path: "docs/evidence/t038-integrations-dark.png",
+            fullPage: true,
+        });
     }
 });
 
@@ -1405,7 +1438,7 @@ test("fiscal workspace keeps unknown outcomes and external gates explicit", asyn
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Fiscal", exact: true }).click();
+    await openManagementSection(page, "Operations", "Fiscal");
     const fiscal = page.locator(".fiscal-preview");
     await expect(
         fiscal.getByRole("heading", {

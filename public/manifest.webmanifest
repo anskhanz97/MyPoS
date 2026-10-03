@@ -4,6 +4,6 @@
     "start_url": "/",
     "display": "standalone",
     "background_color": "#f4f1e8",
-    "theme_color": "#153f3a",
+    "theme_color": "#171615",
     "description": "Counter POS with durable cash-only outage mode"
 }
