@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import AppButton from "../components/AppButton.vue";
-import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 
 type SessionState =
@@ -258,24 +257,6 @@ function approveClose(): void {
                 </table>
             </div>
         </section>
-
-        <div class="state-strip" aria-label="Cash session supporting states">
-            <StatePanel
-                state="empty"
-                title="No active session"
-                message="Open this register with a verified float to begin."
-            />
-            <StatePanel
-                state="loading"
-                title="Loading ledger"
-                message="Fetching the latest server-confirmed movement watermark."
-            />
-            <StatePanel
-                state="error"
-                title="Count needs attention"
-                message="A physical count is required before expected cash is revealed."
-            />
-        </div>
     </div>
 </template>
 

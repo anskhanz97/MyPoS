@@ -126,34 +126,5 @@ const rules = computed(() =>
                 </div>
             </div>
         </section>
-
-        <section class="gallery-section" aria-labelledby="pricing-states-title">
-            <div class="section-heading">
-                <div>
-                    <h2 id="pricing-states-title">Pricing states</h2>
-                    <p>
-                        Publication and checkout failures name the required
-                        recovery.
-                    </p>
-                </div>
-            </div>
-            <div class="state-grid">
-                <StatePanel
-                    state="loading"
-                    title="Calculating quote"
-                    message="Resolving the effective merchant and store versions."
-                />
-                <StatePanel
-                    state="empty"
-                    title="No store override"
-                    message="Merchant prices and mode apply here."
-                />
-                <StatePanel
-                    state="error"
-                    title="Pricing changed"
-                    message="Reprice this cart before finalizing."
-                />
-            </div>
-        </section>
     </div>
 </template>

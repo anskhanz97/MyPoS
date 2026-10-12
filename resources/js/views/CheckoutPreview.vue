@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import AppIcon from "../components/AppIcon.vue";
 import AppButton from "../components/AppButton.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import OfflineRecoveryPreview from "./OfflineRecoveryPreview.vue";
@@ -65,6 +66,12 @@ const lines = ref<Line[]>([
         extras: "Cheese + Jalapeño · + PKR 120",
     },
 ]);
+const checkoutControls = ref<HTMLDialogElement | null>(null);
+async function openCheckoutControls(): Promise<void> {
+    checkoutControls.value?.showModal();
+    await nextTick();
+    scanInput.value?.focus();
+}
 const scanCode = ref("");
 const scanInput = ref<HTMLInputElement>();
 const query = ref("");
@@ -242,7 +249,7 @@ function keyboard(event: KeyboardEvent): void {
         !["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName ?? "")
     ) {
         event.preventDefault();
-        scanInput.value?.focus();
+        void openCheckoutControls();
     }
 }
 onMounted(() => window.addEventListener("keydown", keyboard));
@@ -251,40 +258,57 @@ onBeforeUnmount(() => window.removeEventListener("keydown", keyboard));
 
 <template>
     <div class="checkout-preview">
-        <header class="checkout-command">
-            <div>
-                <p class="kicker">Counter sale · CART-8K2M41</p>
-                <h1>Checkout</h1>
+        <dialog
+            ref="checkoutControls"
+            class="checkout-controls-modal app-dialog"
+            aria-labelledby="checkout-controls-title"
+            @click.self="checkoutControls?.close()"
+        >
+            <div class="checkout-controls-content">
+                <div class="checkout-controls-heading">
+                    <h2 id="checkout-controls-title">Checkout controls</h2>
+                    <AppButton
+                        variant="quiet"
+                        @click="checkoutControls?.close()"
+                        >Close</AppButton
+                    >
+                </div>
+                <div class="checkout-command">
+                    <div>
+                        <p class="kicker">Counter sale · CART-8K2M41</p>
+                        <h1>Checkout</h1>
+                    </div>
+                    <label class="scanner-field">
+                        <span>Scan barcode <kbd>/</kbd></span>
+                        <input
+                            ref="scanInput"
+                            v-model="scanCode"
+                            autocomplete="off"
+                            placeholder="Scan or type code"
+                            @keyup.enter="scan"
+                        />
+                    </label>
+                    <label class="customer-field">
+                        <span>Customer</span>
+                        <select v-model="customer">
+                            <option>Walk-in customer</option>
+                            <option>Sana Malik · Gold</option>
+                        </select>
+                    </label>
+                    <button
+                        class="staff-chip"
+                        type="button"
+                        @click="
+                            announcement =
+                                'Staff changed to Bilal; this cart stayed open.'
+                        "
+                    >
+                        <span>AK</span>Ayesha Khan
+                    </button>
+                </div>
+                <DisplayControlPreview :projection="displayProjection" />
             </div>
-            <label class="scanner-field">
-                <span>Scan barcode <kbd>/</kbd></span>
-                <input
-                    ref="scanInput"
-                    v-model="scanCode"
-                    autocomplete="off"
-                    placeholder="Scan or type code"
-                    @keyup.enter="scan"
-                />
-            </label>
-            <label class="customer-field">
-                <span>Customer</span>
-                <select v-model="customer">
-                    <option>Walk-in customer</option>
-                    <option>Sana Malik · Gold</option>
-                </select>
-            </label>
-            <button
-                class="staff-chip"
-                type="button"
-                @click="
-                    announcement =
-                        'Staff changed to Bilal; this cart stayed open.'
-                "
-            >
-                <span>AK</span>Ayesha Khan
-            </button>
-        </header>
-        <DisplayControlPreview :projection="displayProjection" />
+        </dialog>
 
         <div
             v-if="connection === 'retrying'"
@@ -309,6 +333,15 @@ onBeforeUnmount(() => window.removeEventListener("keydown", keyboard));
                             v-model="query"
                             placeholder="Search products or SKU"
                     /></label>
+                    <button
+                        type="button"
+                        class="checkout-controls-trigger"
+                        aria-label="Open checkout controls"
+                        title="Scanner, customer and display"
+                        @click="openCheckoutControls"
+                    >
+                        <AppIcon name="setup" />
+                    </button>
                 </div>
                 <div class="category-row" aria-label="Product categories">
                     <button type="button" class="selected">Popular</button
@@ -1127,6 +1160,73 @@ kbd {
     .checkout-status {
         align-items: start;
         flex-direction: column;
+    }
+}
+</style>
+
+<style scoped>
+.checkout-controls-trigger {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 2.8rem;
+    height: 2.8rem;
+    color: var(--accent);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.85rem;
+    cursor: pointer;
+}
+.checkout-controls-trigger:hover {
+    background: var(--selection);
+    border-color: var(--accent);
+}
+.checkout-controls-modal {
+    width: min(48rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+}
+.checkout-controls-content {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+}
+.checkout-controls-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+.checkout-controls-modal .checkout-command {
+    grid-template-columns: 1fr;
+    border: 0;
+    padding: 0;
+    box-shadow: none;
+}
+.checkout-controls-modal :deep(.display-control) {
+    grid-template-columns: 1fr;
+    border-radius: 0.75rem;
+    box-shadow: none;
+}
+.checkout-controls-modal :deep(.display-state) {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+}
+.checkout-controls-modal :deep(.display-actions) {
+    justify-content: flex-start;
+}
+@media (max-width: 639px) {
+    .checkout-section-heading {
+        position: relative;
+        padding-right: 3.25rem;
+    }
+    .checkout-controls-trigger {
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+    .checkout-section-heading .product-search {
+        width: 100%;
     }
 }
 </style>

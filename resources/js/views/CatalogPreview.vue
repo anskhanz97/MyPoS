@@ -185,28 +185,5 @@ const visibleProducts = computed(() =>
                 </article>
             </div>
         </section>
-        <section class="gallery-section" aria-labelledby="catalog-states-title">
-            <div class="section-heading">
-                <div>
-                    <h2 id="catalog-states-title">Catalog states</h2>
-                    <p>Search and editing explain their current boundary.</p>
-                </div>
-            </div>
-            <div class="state-grid">
-                <StatePanel
-                    state="loading"
-                    title="Loading catalog page"
-                    message="Fetching up to 25 authorized products."
-                /><StatePanel
-                    state="empty"
-                    title="No products yet"
-                    message="Create a unit, then the first finished product."
-                /><StatePanel
-                    state="error"
-                    title="Structure changed"
-                    message="Reload before saving this versioned edit."
-                />
-            </div>
-        </section>
     </div>
 </template>

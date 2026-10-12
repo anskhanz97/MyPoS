@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import AppIcon from "../components/AppIcon.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import { canonicalHash } from "../offline/canonical";
 import { serverReachable } from "../offline/connectivity";
@@ -141,8 +142,12 @@ onBeforeUnmount(() => writer.release());
 </script>
 
 <template>
-    <section class="offline-recovery" aria-labelledby="offline-recovery-title">
-        <div class="offline-heading">
+    <details
+        class="offline-recovery"
+        role="region"
+        aria-labelledby="offline-recovery-title"
+    >
+        <summary class="offline-heading">
             <div>
                 <p class="kicker">Outage mode · cash only</p>
                 <h2 id="offline-recovery-title">Durable offline queue</h2>
@@ -155,7 +160,8 @@ onBeforeUnmount(() => writer.release());
                     writerActive ? "writer tab" : "read-only tab"
                 }}</StatusBadge>
             </div>
-        </div>
+            <AppIcon name="collapse" class="outage-chevron" />
+        </summary>
         <div class="offline-policy">
             <div>
                 <span>Register lease</span><strong>71h 42m remaining</strong>
@@ -247,5 +253,25 @@ onBeforeUnmount(() => writer.release());
                 logout and application updates.</span
             >
         </div>
-    </section>
+    </details>
 </template>
+
+<style scoped>
+.offline-heading {
+    cursor: pointer;
+    list-style: none;
+}
+.offline-heading::-webkit-details-marker {
+    display: none;
+}
+.offline-heading .outage-chevron {
+    transform: rotate(-90deg);
+    margin-left: 0.5rem;
+}
+.offline-recovery[open] .outage-chevron {
+    transform: rotate(90deg);
+}
+.offline-recovery:not([open]) {
+    padding-block: 0.9rem;
+}
+</style>

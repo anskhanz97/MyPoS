@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import AppButton from "../components/AppButton.vue";
-import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 
 type Status = "trial" | "active" | "grace" | "restricted" | "cancelled";
@@ -179,36 +178,6 @@ function restrict(): void {
                         <dd>Contact MyPoS administration</dd>
                     </div>
                 </dl>
-            </div>
-        </section>
-
-        <section
-            class="gallery-section"
-            aria-labelledby="platform-states-title"
-        >
-            <div class="section-heading">
-                <div>
-                    <h2 id="platform-states-title">Platform states</h2>
-                    <p>
-                        Operational responses do not reveal another merchant or
-                        any production secret.
-                    </p>
-                </div>
-            </div>
-            <div class="state-grid">
-                <StatePanel
-                    state="loading"
-                    title="Loading subscriptions"
-                    message="Checking the platform ledger."
-                /><StatePanel
-                    state="empty"
-                    title="No plan assigned"
-                    message="Assign an active plan before activation."
-                /><StatePanel
-                    state="error"
-                    title="Duplicate reference"
-                    message="Review the existing payment instead of recording it again."
-                />
             </div>
         </section>
     </div>

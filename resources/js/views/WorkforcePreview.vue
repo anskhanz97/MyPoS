@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import AppButton from "../components/AppButton.vue";
-import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 
 const view = ref<"schedule" | "attendance" | "leave">("schedule");
@@ -194,18 +193,6 @@ function selectView(next: "schedule" | "attendance" | "leave"): void {
                     ><AppButton>Decline</AppButton>
                 </div>
             </article>
-        </div>
-
-        <div class="state-row">
-            <StatePanel
-                state="empty"
-                title="No rota published"
-                message="Create the first shift or copy a previous week."
-            /><StatePanel
-                state="error"
-                title="Missing punch"
-                message="A manager can correct the record with a reason; the original event remains in the audit trail."
-            />
         </div>
     </section>
 </template>

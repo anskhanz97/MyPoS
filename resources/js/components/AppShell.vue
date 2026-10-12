@@ -23,16 +23,9 @@ const props = defineProps<{
 const emit = defineEmits<{
     toggleTheme: [];
     selectSection: [section: string];
-    selectShell: [shell: ShellKind];
 }>();
 
 const navigationGroups: NavigationGroup[] = [
-    {
-        label: "Overview",
-        icon: "overview",
-        description: "Workspace and system state",
-        items: ["Components", "States", "Shell notes"],
-    },
     {
         label: "Setup",
         icon: "setup",
@@ -83,14 +76,16 @@ const navigationGroups: NavigationGroup[] = [
         ],
     },
 ];
-const shellOptions: ShellKind[] = ["management", "checkout", "public"];
 
 const storedPanelState = localStorage.getItem("mypos.navigation.expanded");
 const panelExpanded = ref(storedPanelState !== "false");
 const mobileNavigationOpen = ref(false);
+const accountOpen = ref(false);
+const logoutBusy = ref(false);
+const accountMessage = ref("");
 const selectedGroupLabel = ref(
     navigationGroups.find((group) => group.items.includes(props.activeSection))
-        ?.label ?? "Overview",
+        ?.label ?? "Setup",
 );
 
 const selectedGroup = computed(
@@ -125,12 +120,46 @@ function selectSection(section: string): void {
 }
 
 function togglePanel(): void {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+        mobileNavigationOpen.value = false;
+        return;
+    }
     panelExpanded.value = !panelExpanded.value;
 }
 
 function openMobileNavigation(): void {
     panelExpanded.value = true;
     mobileNavigationOpen.value = true;
+}
+async function logout(): Promise<void> {
+    logoutBusy.value = true;
+    accountMessage.value = "";
+    try {
+        const csrfToken = document.cookie
+            .split("; ")
+            .find((cookie) => cookie.startsWith("XSRF-TOKEN="))
+            ?.slice(11);
+        const response = await fetch("/api/v1/auth/logout", {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: {
+                Accept: "application/json",
+                ...(csrfToken
+                    ? { "X-XSRF-TOKEN": decodeURIComponent(csrfToken) }
+                    : {}),
+            },
+        });
+        if (response.ok || response.status === 401) {
+            accountOpen.value = false;
+            selectSection("Access");
+        } else {
+            accountMessage.value = "Unable to log out. Please try again.";
+        }
+    } catch {
+        accountMessage.value = "Unable to log out. Please try again.";
+    } finally {
+        logoutBusy.value = false;
+    }
 }
 </script>
 
@@ -143,7 +172,6 @@ function openMobileNavigation(): void {
         ]"
     >
         <aside
-            v-if="kind !== 'public'"
             id="application-navigation"
             class="application-navigation"
             :class="{
@@ -175,9 +203,51 @@ function openMobileNavigation(): void {
                     </button>
                 </nav>
 
-                <div class="nav-rail__status" title="Online simulation">
-                    <i class="signal signal--online"></i>
-                    <span class="sr-only">Online simulation</span>
+                <div class="sidebar-tools" @keydown.esc="accountOpen = false">
+                    <button
+                        type="button"
+                        class="sidebar-tool"
+                        aria-label="Notifications"
+                        @click="selectSection('Notifications')"
+                    >
+                        <AppIcon name="bell" />
+                    </button>
+                    <ThemeToggle
+                        :theme="theme"
+                        :next-theme="nextTheme"
+                        @toggle="$emit('toggleTheme')"
+                    />
+                    <button
+                        type="button"
+                        class="sidebar-tool"
+                        aria-label="Profile and logout"
+                        :aria-expanded="accountOpen"
+                        @click="accountOpen = !accountOpen"
+                    >
+                        <span class="user-avatar">AK</span>
+                    </button>
+                    <div v-if="accountOpen" class="account-menu">
+                        <strong>Ayesha Khan</strong>
+                        <button
+                            type="button"
+                            @click="
+                                selectSection('Access');
+                                accountOpen = false;
+                            "
+                        >
+                            Profile
+                        </button>
+                        <button
+                            type="button"
+                            :disabled="logoutBusy"
+                            @click="logout"
+                        >
+                            {{ logoutBusy ? "Logging out..." : "Log out" }}
+                        </button>
+                        <p v-if="accountMessage" role="alert">
+                            {{ accountMessage }}
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -224,91 +294,39 @@ function openMobileNavigation(): void {
                         <span aria-hidden="true">›</span>
                     </button>
                 </nav>
-
-                <div class="nav-panel__footer">
-                    <span
-                        ><i class="signal signal--online"></i>Online
-                        simulation</span
-                    >
-                    <span><b>0</b> pending</span>
-                </div>
             </div>
+            <button
+                type="button"
+                class="sidebar-edge-toggle"
+                :aria-label="
+                    panelExpanded ? 'Collapse navigation' : 'Expand navigation'
+                "
+                :aria-expanded="panelExpanded"
+                aria-controls="application-navigation"
+                @click="togglePanel"
+            >
+                <AppIcon name="collapse" />
+            </button>
         </aside>
 
         <button
-            v-if="kind !== 'public' && mobileNavigationOpen"
+            v-if="mobileNavigationOpen"
             type="button"
             class="navigation-scrim"
             aria-label="Close navigation"
             @click="mobileNavigationOpen = false"
         ></button>
 
-        <header class="topbar">
-            <div class="topbar__identity">
-                <button
-                    v-if="kind !== 'public'"
-                    type="button"
-                    class="mobile-menu"
-                    aria-label="Open navigation"
-                    aria-controls="application-navigation"
-                    :aria-expanded="mobileNavigationOpen"
-                    @click="openMobileNavigation"
-                >
-                    <AppIcon name="menu" />
-                </button>
-                <div>
-                    <span class="topbar__scope">
-                        {{
-                            kind === "public"
-                                ? "Member preview"
-                                : selectedGroup.label
-                        }}
-                        <span aria-hidden="true">/</span>
-                        {{ activeSection }}
-                    </span>
-                    <strong>
-                        {{
-                            kind === "public"
-                                ? "Sample Merchant rewards"
-                                : kind === "checkout"
-                                  ? "Checkout workspace"
-                                  : "Management workspace"
-                        }}
-                    </strong>
-                </div>
-            </div>
-
-            <div class="topbar__actions">
-                <button type="button" class="topbar-action" aria-label="Search">
-                    <AppIcon name="search" />
-                </button>
-                <button
-                    type="button"
-                    class="topbar-action"
-                    aria-label="Notifications"
-                >
-                    <AppIcon name="bell" />
-                    <span class="notification-dot"></span>
-                </button>
-                <div class="shell-switcher" aria-label="Preview shell">
-                    <button
-                        v-for="shell in shellOptions"
-                        :key="shell"
-                        type="button"
-                        :aria-pressed="kind === shell"
-                        @click="$emit('selectShell', shell)"
-                    >
-                        {{ shell }}
-                    </button>
-                </div>
-                <ThemeToggle
-                    :theme="theme"
-                    :next-theme="nextTheme"
-                    @toggle="$emit('toggleTheme')"
-                />
-                <span class="user-avatar" title="Ayesha Khan">AK</span>
-            </div>
-        </header>
+        <button
+            type="button"
+            class="mobile-menu sidebar-mobile-trigger"
+            aria-label="Open navigation"
+            aria-controls="application-navigation"
+            :aria-expanded="mobileNavigationOpen"
+            @click="openMobileNavigation"
+        >
+            <AppIcon name="menu" />
+        </button>
 
         <main id="workspace" class="workspace" tabindex="-1"><slot /></main>
     </div>

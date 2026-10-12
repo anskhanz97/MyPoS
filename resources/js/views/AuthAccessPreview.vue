@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import AppButton from "../components/AppButton.vue";
-import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import { type StaffRole, useStaffAccess } from "../auth/staffAccess";
 
@@ -192,33 +191,6 @@ function approve(): void {
                             : "Approve this action once"
                     }}</AppButton
                 >
-            </div>
-        </section>
-
-        <section class="gallery-section" aria-labelledby="access-states-title">
-            <div class="section-heading">
-                <div>
-                    <h2 id="access-states-title">Access states</h2>
-                    <p>
-                        Failures disclose the next safe action without exposing
-                        credentials.
-                    </p>
-                </div>
-            </div>
-            <div class="state-grid">
-                <StatePanel
-                    state="loading"
-                    title="Checking session"
-                    message="Validating account and merchant membership."
-                /><StatePanel
-                    state="empty"
-                    title="No store assignment"
-                    message="Ask an owner to assign an authorized store."
-                /><StatePanel
-                    state="error"
-                    title="PIN attempts paused"
-                    message="Wait for the limit window or use account recovery."
-                />
             </div>
         </section>
     </div>

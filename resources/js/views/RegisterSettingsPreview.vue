@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import AppButton from "../components/AppButton.vue";
-import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 
 const pairingCode = ref<string | null>(null);
@@ -224,35 +223,6 @@ function publishSettings(): void {
                 <AppButton variant="primary" @click="publishSettings"
                     >Publish next version</AppButton
                 >
-            </div>
-        </section>
-        <section
-            class="gallery-section"
-            aria-labelledby="register-states-title"
-        >
-            <div class="section-heading">
-                <div>
-                    <h2 id="register-states-title">Provisioning states</h2>
-                    <p>
-                        Operators always see what is known and what action is
-                        safe.
-                    </p>
-                </div>
-            </div>
-            <div class="state-grid">
-                <StatePanel
-                    state="loading"
-                    title="Checking device lease"
-                    message="Confirming current credentials and configuration."
-                /><StatePanel
-                    state="empty"
-                    title="No customer display"
-                    message="Enable it only when a second screen is present."
-                /><StatePanel
-                    state="error"
-                    title="Printer unconfigured"
-                    message="Choose browser dialog or install the approved helper later."
-                />
             </div>
         </section>
     </div>

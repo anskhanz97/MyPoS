@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import AppButton from "../components/AppButton.vue";
-import StatePanel from "../components/StatePanel.vue";
 import StatusBadge from "../components/StatusBadge.vue";
 import { type StoreOption, useStoreContext } from "../tenancy/storeContext";
 
@@ -211,34 +210,6 @@ function activate(): void {
             <p class="context-announcement" aria-live="polite">
                 {{ storeContext.announcement.value }}
             </p>
-        </section>
-
-        <section class="gallery-section" aria-labelledby="tenant-states-title">
-            <div class="section-heading">
-                <div>
-                    <h2 id="tenant-states-title">
-                        Store administration states
-                    </h2>
-                    <p>Operational states remain explicit in either theme.</p>
-                </div>
-            </div>
-            <div class="state-grid">
-                <StatePanel
-                    state="loading"
-                    title="Loading authorized stores"
-                    message="Membership and assignments are being checked."
-                />
-                <StatePanel
-                    state="empty"
-                    title="No additional stores"
-                    message="Create a store after the merchant is activated."
-                />
-                <StatePanel
-                    state="error"
-                    title="Store context unavailable"
-                    message="The assignment changed. Choose another authorized store."
-                />
-            </div>
         </section>
     </div>
 </template>

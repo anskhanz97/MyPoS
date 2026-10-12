@@ -7,8 +7,8 @@ import CheckoutPreview from "./views/CheckoutPreview.vue";
 import CustomerDisplayWindow from "./views/CustomerDisplayWindow.vue";
 
 const shell = ref<ShellKind>("management");
-const activeSection = ref("Components");
-const previousManagementSection = ref("Components");
+const activeSection = ref("Tenancy");
+const previousManagementSection = ref("Tenancy");
 const themePreference = useThemePreference();
 const currentTheme = themePreference.theme;
 const nextTheme = themePreference.nextTheme;
@@ -65,7 +65,6 @@ function selectSection(section: string): void {
         :next-theme="nextTheme"
         :active-section="activeSection"
         @toggle-theme="themePreference.toggle"
-        @select-shell="selectShell"
         @select-section="selectSection"
     >
         <CheckoutPreview v-if="shell === 'checkout'" />

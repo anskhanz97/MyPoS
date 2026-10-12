@@ -19,9 +19,11 @@ test("shell persists theme without losing populated form state or focus", async 
 }) => {
     await page.goto("/");
     await expect(
-        page.getByRole("heading", { name: "Fast controls, clear state." }),
+        page.getByRole("heading", {
+            name: "Choose how stores own daily records.",
+        }),
     ).toBeVisible();
-    const customer = page.getByLabel("Customer name");
+    const customer = page.getByLabel("Transient sale reference");
     await customer.fill("Synthetic retained value");
     const toggle = page.getByRole("button", { name: "Use dark mode" });
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
@@ -53,15 +55,17 @@ test("shell persists theme without losing populated form state or focus", async 
 test("staff and public theme preferences are independent", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Use dark mode" }).click();
-    await page.getByRole("button", { name: "public" }).click();
+    await openManagementSection(page, "Customers", "Member profile");
 
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(page.getByText("Member preview")).toBeVisible();
+    await expect(
+        page.getByRole("navigation", { name: "Customers pages" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Void draft" })).toHaveCount(
         0,
     );
     await expect(
-        page.getByRole("heading", { name: "Member access, limited data." }),
+        page.getByRole("heading", { name: "Everyday Points" }),
     ).toBeVisible();
     if (process.env.CAPTURE_VISUAL_EVIDENCE === "1") {
         await page.screenshot({
@@ -70,10 +74,12 @@ test("staff and public theme preferences are independent", async ({ page }) => {
         });
     }
 
-    await page.getByRole("button", { name: "management" }).click();
+    await openManagementSection(page, "Setup", "Tenancy");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.getByRole("button", { name: "checkout" }).click();
-    await expect(page.getByText("Checkout workspace")).toBeVisible();
+    await openManagementSection(page, "Sell", "Checkout");
+    await expect(
+        page.getByRole("navigation", { name: "Sell pages" }),
+    ).toBeVisible();
     if (process.env.CAPTURE_VISUAL_EVIDENCE === "1") {
         await page.screenshot({
             path: "docs/evidence/t006-checkout-dark.png",
@@ -101,6 +107,18 @@ test("narrow shell has no horizontal page overflow and print stays black on whit
             fullPage: true,
         });
     }
+
+    await page.getByRole("button", { name: "Open navigation" }).click();
+    await expect(
+        page.getByRole("button", { name: "Open navigation" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    await expect(
+        page.getByRole("button", { name: "Use dark mode" }),
+    ).toBeVisible();
+    await page.locator(".sidebar-edge-toggle").click();
+    await expect(
+        page.getByRole("button", { name: "Open navigation" }),
+    ).toHaveAttribute("aria-expanded", "false");
 
     await page.emulateMedia({ media: "print" });
     const printColors = await page.evaluate(() => {
@@ -168,42 +186,44 @@ test("semantic text pairs meet WCAG AA contrast in both themes", async ({
     }
 });
 
-test("sidebar navigation collapses and the approval dialog supports keyboard interaction", async ({
+test("sidebar controls remain available when collapsed and sample sections are removed", async ({
     page,
 }) => {
     await page.goto("/");
-    await expect(page.getByText("Workspace and system state")).toBeVisible();
-    await page.getByRole("button", { name: "Collapse navigation" }).click();
-    await expect(page.getByText("Workspace and system state")).toBeHidden();
-    await page
-        .getByRole("button", { name: "Open Overview navigation" })
-        .click();
-    await expect(page.getByText("Workspace and system state")).toBeVisible();
-    await openManagementSection(page, "Overview", "States");
     await expect(
-        page.getByRole("heading", { name: "System states" }),
+        page.getByRole("button", { name: "Open Overview navigation" }),
+    ).toHaveCount(0);
+    await expect(page.locator(".topbar")).toHaveCount(0);
+    await expect(page.getByText("Online simulation")).toHaveCount(0);
+    await expect(
+        page.getByRole("heading", { name: "Store administration states" }),
+    ).toHaveCount(0);
+    const edgeToggle = page.locator(".sidebar-edge-toggle");
+    await edgeToggle.click();
+    await expect(
+        page.getByRole("navigation", { name: "Setup pages" }),
+    ).toBeHidden();
+    await expect(
+        page.getByRole("button", { name: "Use dark mode" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Profile and logout" }).click();
+    await expect(
+        page.getByRole("button", { name: "Log out", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Profile and logout" }).click();
+    await edgeToggle.click();
+    await expect(
+        page.getByRole("navigation", { name: "Setup pages" }),
+    ).toBeVisible();
+    await page
+        .getByRole("button", { name: "Notifications", exact: true })
+        .click();
+    await expect(
+        page.getByRole("navigation", { name: "Operations pages" }),
     ).toBeVisible();
     if (process.env.CAPTURE_VISUAL_EVIDENCE === "1") {
-        await page.screenshot({
-            path: "docs/evidence/t006-states-light.png",
-            fullPage: true,
-        });
+        await page.screenshot({ path: "output/mypos-sidebar.png" });
     }
-
-    await page.getByRole("button", { name: "Use dark mode" }).click();
-    if (process.env.CAPTURE_VISUAL_EVIDENCE === "1") {
-        await page.screenshot({
-            path: "docs/evidence/t006-states-dark.png",
-            fullPage: true,
-        });
-    }
-
-    const opener = page.getByRole("button", { name: "Open approval prompt" });
-    await opener.click();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toBeHidden();
-    await expect(opener).toBeFocused();
 });
 
 test("cash control keeps the count blind, records handover, and reveals variance after submit", async ({
@@ -856,7 +876,7 @@ test("checkout preserves cart state across scanning, suspension, network loss an
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     const checkout = page.locator(".checkout-preview");
     await expect(
         checkout.getByRole("heading", { name: "Checkout", exact: true }),
@@ -906,7 +926,7 @@ test("sale payment fully settles split tenders and reports each outcome truthful
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     const checkout = page.locator(".checkout-preview");
     await checkout.getByRole("button", { name: "Continue to payment" }).click();
     await expect(
@@ -961,7 +981,7 @@ test("receipt printing keeps sale finality separate and recovers from helper fai
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     const checkout = page.locator(".checkout-preview");
     await checkout.getByRole("button", { name: "Continue to payment" }).click();
     await checkout.getByRole("button", { name: "Finalize sale" }).click();
@@ -1011,11 +1031,14 @@ test("paired customer display follows the register in a read-only second window 
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     const checkout = page.locator(".checkout-preview");
     const controls = checkout.getByRole("region", {
         name: "Customer display controls",
     });
+    await checkout
+        .getByRole("button", { name: "Open checkout controls" })
+        .click();
     await expect(controls.getByText(/works normally without/)).toBeVisible();
     await controls.getByRole("button", { name: "Enable display" }).click();
     await expect(
@@ -1043,6 +1066,10 @@ test("paired customer display follows the register in a read-only second window 
     await display.getByRole("button", { name: "Use dark mode" }).click();
     await expect(display.locator("html")).toHaveAttribute("data-theme", "dark");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page
+        .getByRole("dialog", { name: "Checkout controls" })
+        .getByRole("button", { name: "Close", exact: true })
+        .click();
     await checkout.getByRole("button", { name: "Scan tea" }).click();
     await expect(screen.getByText("PKR 1503.32")).toBeVisible();
 
@@ -1065,6 +1092,9 @@ test("paired customer display follows the register in a read-only second window 
             fullPage: true,
         });
     }
+    await checkout
+        .getByRole("button", { name: "Open checkout controls" })
+        .click();
     await controls.getByRole("button", { name: "Simulate disconnect" }).click();
     await expect(
         controls.getByText("disconnected", { exact: true }),
@@ -1075,8 +1105,9 @@ test("offline cash sale survives reload and unresolved evidence is preserved in 
     page,
 }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     const offline = page.getByRole("region", { name: "Durable offline queue" });
+    await offline.locator("summary").click();
     await expect(
         offline.getByText("writer tab", { exact: true }),
     ).toBeVisible();
@@ -1090,10 +1121,11 @@ test("offline cash sale survives reload and unresolved evidence is preserved in 
         "committed together",
     );
     await page.reload();
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     const restored = page.getByRole("region", {
         name: "Durable offline queue",
     });
+    await restored.locator("summary").click();
     await expect(restored.getByText("queued", { exact: true })).toBeVisible();
     await restored.getByRole("button", { name: "Simulate disk full" }).click();
     await expect(restored.locator(".offline-message")).toContainText(
@@ -1121,11 +1153,11 @@ test("offline cash sale survives reload and unresolved evidence is preserved in 
 
 test("only one checkout tab owns offline writes", async ({ page, context }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(page, "Sell", "Checkout");
     await expect(page.getByText("writer tab", { exact: true })).toBeVisible();
     const second = await context.newPage();
     await second.goto("/");
-    await second.getByRole("button", { name: "checkout", exact: true }).click();
+    await openManagementSection(second, "Sell", "Checkout");
     await expect(
         second.getByText("read-only tab", { exact: true }),
     ).toBeVisible();
@@ -1175,7 +1207,7 @@ test("public loyalty uses one limited mobile form and read-only refresh", async 
 }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    await page.getByRole("button", { name: "public", exact: true }).click();
+    await openManagementSection(page, "Customers", "Member profile");
     const publicLoyalty = page.locator(".public-loyalty");
     await expect(
         publicLoyalty.getByRole("heading", { name: "Everyday Points" }),
@@ -1463,4 +1495,41 @@ test("fiscal workspace keeps unknown outcomes and external gates explicit", asyn
             fullPage: true,
         });
     }
+});
+
+test("checkout keeps optional controls in a dialog and outage details collapsed", async ({
+    page,
+}) => {
+    await page.goto("/");
+    await openManagementSection(page, "Sell", "Checkout");
+    const dialog = page.getByRole("dialog", { name: "Checkout controls" });
+    const outage = page.getByRole("region", { name: "Durable offline queue" });
+    await expect(dialog).toBeHidden();
+    await expect(
+        outage.getByRole("button", { name: "Queue offline cash sale" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Open checkout controls" }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByPlaceholder("Scan or type code")).toBeFocused();
+    await dialog
+        .getByRole("combobox", { name: /^Customer/ })
+        .selectOption("Sana Malik · Gold");
+    await expect(
+        dialog.getByRole("button", { name: "Enable display" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("Version 7 · Sana Malik · Gold")).toBeVisible();
+    await page.keyboard.press("/");
+    await expect(dialog.getByPlaceholder("Scan or type code")).toBeFocused();
+    await page.keyboard.press("Escape");
+    await outage.locator("summary").click();
+    await expect(
+        outage.getByRole("button", { name: "Queue offline cash sale" }),
+    ).toBeVisible();
+    await outage.locator("summary").click();
+    await expect(
+        outage.getByRole("button", { name: "Queue offline cash sale" }),
+    ).toBeHidden();
+    await page.screenshot({ path: "output/mypos-checkout.png" });
 });

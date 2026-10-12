@@ -134,14 +134,21 @@ input[inputmode="decimal"] {
     min-height: 100vh;
     display: grid;
     grid-template-columns: 4.75rem 16.25rem minmax(0, 1fr);
-    grid-template-rows: 4.75rem 1fr;
+    grid-template-rows: 1fr;
     transition: grid-template-columns 180ms ease;
 }
 .app-shell--nav-collapsed {
     grid-template-columns: 4.75rem 0 minmax(0, 1fr);
 }
 .application-navigation {
-    display: contents;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    grid-column: 1 / 3;
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: 4.75rem minmax(0, 1fr);
+    height: 100dvh;
 }
 .nav-rail {
     position: sticky;
@@ -481,18 +488,7 @@ input[inputmode="decimal"] {
     min-width: 0;
     padding: clamp(1rem, 2.2vw, 1.75rem);
 }
-.app-shell--public {
-    display: grid;
-    grid-template-columns: 1fr;
-}
-.app-shell--public .topbar,
-.app-shell--public .workspace {
-    grid-column: 1;
-}
-.app-shell--public .workspace {
-    width: min(76rem, 100%);
-    margin-inline: auto;
-}
+
 .theme-toggle {
     min-height: 44px;
     display: inline-flex;
@@ -1188,7 +1184,7 @@ td.numeric {
 @media (max-width: 1023px) {
     .app-shell {
         grid-template-columns: 1fr;
-        grid-template-rows: 4.75rem 1fr;
+        grid-template-rows: 1fr;
     }
     .application-navigation {
         position: fixed;
@@ -2348,5 +2344,159 @@ td.numeric {
     .page-heading {
         break-inside: avoid;
         border-color: #333;
+    }
+}
+
+/* Sidebar controls stay available independently of page scrolling. */
+.nav-rail,
+.nav-panel {
+    position: relative;
+    min-height: 0;
+    height: 100dvh;
+}
+.nav-panel {
+    width: auto;
+    min-width: 0;
+}
+.nav-rail__groups {
+    min-height: 0;
+    overflow-y: auto;
+    flex: 1;
+    align-content: start;
+}
+.nav-panel__header,
+.merchant-context {
+    flex-shrink: 0;
+}
+.nav-panel__items {
+    min-height: 0;
+    flex: 1;
+    align-content: start;
+}
+.nav-rail__groups,
+.nav-panel__items {
+    scrollbar-width: thin;
+    scrollbar-color: #db8b58 #24211e;
+}
+.nav-rail__groups::-webkit-scrollbar,
+.nav-panel__items::-webkit-scrollbar {
+    width: 6px;
+}
+.nav-rail__groups::-webkit-scrollbar-track,
+.nav-panel__items::-webkit-scrollbar-track {
+    background: #24211e;
+}
+.nav-rail__groups::-webkit-scrollbar-thumb,
+.nav-panel__items::-webkit-scrollbar-thumb {
+    background: #db8b58;
+    border: 1px solid #24211e;
+    border-radius: 1rem;
+}
+.sidebar-tools {
+    position: relative;
+    display: grid;
+    gap: 0.4rem;
+    padding-top: 0.75rem;
+}
+.sidebar-tool,
+.sidebar-tools .theme-toggle {
+    display: grid;
+    place-items: center;
+    min-width: 2.65rem;
+    width: 2.65rem;
+    min-height: 2.65rem;
+    padding: 0;
+    color: #eee9e3;
+    background: #24211e;
+    border: 1px solid #403a34;
+    border-radius: 0.5rem;
+    cursor: pointer;
+}
+.sidebar-tools .theme-toggle span:last-child {
+    display: block;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+}
+.sidebar-tool .user-avatar {
+    display: grid;
+}
+.sidebar-tool:hover,
+.sidebar-tools .theme-toggle:hover {
+    border-color: #db8b58;
+}
+.account-menu {
+    position: absolute;
+    bottom: 0;
+    left: calc(100% + 0.75rem);
+    z-index: 80;
+    display: grid;
+    gap: 0.5rem;
+    width: 13rem;
+    padding: 1rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow);
+}
+.account-menu button {
+    padding: 0.65rem;
+    color: var(--text);
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: 0.4rem;
+    cursor: pointer;
+    text-align: left;
+}
+.sidebar-edge-toggle {
+    position: absolute;
+    right: -0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    width: 1.7rem;
+    min-height: 3.1rem;
+    padding: 0;
+    color: #db8b58;
+    background: #24211e;
+    border: 1px solid #716960;
+    border-radius: 1rem;
+    cursor: pointer;
+}
+.app-shell--nav-collapsed .sidebar-edge-toggle .app-icon {
+    transform: rotate(180deg);
+}
+.workspace {
+    grid-row: 1;
+}
+.sidebar-mobile-trigger {
+    position: fixed;
+    top: 0.6rem;
+    left: 0.6rem;
+    z-index: 60;
+}
+@media (max-width: 1023px) {
+    .application-navigation {
+        grid-column: auto;
+        height: 100dvh;
+    }
+    .app-shell--nav-collapsed .nav-panel {
+        visibility: visible;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+    }
+    .workspace {
+        padding-top: 4rem;
+    }
+}
+@media print {
+    .sidebar-mobile-trigger {
+        display: none !important;
     }
 }
