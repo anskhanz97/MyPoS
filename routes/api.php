@@ -65,6 +65,8 @@ use App\Http\Controllers\Api\V1\ReadinessController;
 use App\Http\Controllers\Api\V1\ReceiptPrintController;
 use App\Http\Controllers\Api\V1\RegisterController;
 use App\Http\Controllers\Api\V1\ReportingController;
+use App\Http\Controllers\Api\V1\ReportingSetupController;
+use App\Http\Controllers\Api\V1\ReportWorkspaceController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\SaleReturnController;
 use App\Http\Controllers\Api\V1\ScaleBarcodeFormatController;
@@ -104,6 +106,27 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/public/loyalty/{programSlug}/lookup', [PublicLoyaltyController::class, 'lookup'])->middleware('throttle:public-loyalty-lookup');
     Route::middleware(['web', 'auth', 'active.user'])->group(function (): void {
         Route::get('/bootstrap', BootstrapController::class)->name('api.v1.bootstrap');
+        Route::prefix('/merchants/{merchant}/reporting')->middleware('throttle:120,1')->group(function (): void {
+            $workspace = ReportWorkspaceController::class;
+            $setup = ReportingSetupController::class;
+            Route::get('/catalog', [$workspace, 'catalog']);
+            Route::get('/reports/{report}', [$workspace, 'show']);
+            Route::get('/reports/{report}/rows', [$workspace, 'show']);
+            Route::post('/reports/{report}/exports', [$workspace, 'export']);
+            Route::get('/exports', [$workspace, 'exports']);
+            Route::get('/exports/{dataTransferJob}/download', [$workspace, 'download']);
+            Route::get('/filters', [$workspace, 'saved']);
+            Route::post('/filters', [$workspace, 'save']);
+            Route::put('/filters/{savedReportFilter}', [$workspace, 'save']);
+            Route::delete('/filters/{savedReportFilter}', [$workspace, 'deleteSaved']);
+            Route::get('/setup', [$setup, 'index']);
+            Route::get('/setup/export.csv', [$setup, 'export']);
+            Route::post('/setup/{kind}', [$setup, 'save']);
+            Route::put('/setup/{kind}/{id}', [$setup, 'save']);
+            Route::put('/products/{product}', [$setup, 'product']);
+            Route::put('/variants/{variant}', [$setup, 'variant']);
+            Route::put('/registers/{register}', [$setup, 'register']);
+        });
         Route::apiResource('merchants', MerchantController::class)->only(['index', 'store']);
         Route::apiResource('merchants.memberships', MerchantMembershipController::class)
             ->only(['index', 'store', 'update'])->scoped();

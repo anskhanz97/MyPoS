@@ -21,7 +21,11 @@ class ReportingController extends Controller
     {
         $user = $this->user($request);
         [$store,$permission] = $this->scope($request, $merchant);
-        $authorizer->authorize($user, $merchant, $permission, $store);
+        $membership = $authorizer->authorize($user, $merchant, $permission, $store);
+        abort_if($membership->role->value === 'cashier', 403, 'Use the reporting workspace for your own sales activity.');
+        if ($report === 'sales') {
+            $authorizer->authorize($user, $merchant, Permission::ReportCosts, $store);
+        }
         if ($report === 'workforce') {
             $authorizer->authorize($user, $merchant, Permission::PayrollManage);
         }$d = $request->validate(['start' => ['required', 'date'], 'end' => ['required', 'date', 'after_or_equal:start'], 'store_id' => ['nullable', 'string']]);
@@ -33,7 +37,11 @@ class ReportingController extends Controller
     {
         $user = $this->user($request);
         [$store,$permission] = $this->scope($request, $merchant);
-        $authorizer->authorize($user, $merchant, $permission, $store);
+        $membership = $authorizer->authorize($user, $merchant, $permission, $store);
+        abort_if($membership->role->value === 'cashier', 403, 'Report exports require a manager or owner.');
+        if ($report === 'sales') {
+            $authorizer->authorize($user, $merchant, Permission::ReportCosts, $store);
+        }
         if ($report === 'workforce') {
             $authorizer->authorize($user, $merchant, Permission::PayrollManage);
         }$d = $request->validate(['start' => ['required', 'date'], 'end' => ['required', 'date', 'after_or_equal:start'], 'store_id' => ['nullable', 'string']]);

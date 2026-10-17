@@ -21,4 +21,6 @@ Artisan::command('loyalty:reconcile {--repair}', function (LoyaltyService $loyal
 Schedule::command('loyalty:expire')->hourly()->withoutOverlapping();
 Schedule::command('loyalty:reconcile')->daily()->withoutOverlapping();
 Schedule::command('ops:heartbeat')->everyMinute()->withoutOverlapping();
+Schedule::command('reports:refresh --queue')->everyMinute()->withoutOverlapping();
+Schedule::command('ops:prune-logs')->dailyAt('02:40')->withoutOverlapping();
 Schedule::command('ops:prune-expired-artifacts')->dailyAt('02:20')->withoutOverlapping();

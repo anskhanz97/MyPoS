@@ -3,6 +3,7 @@
 namespace App\Domain\Inventory;
 
 use App\Domain\Inventory\Enums\StocktakeState;
+use App\Domain\Shared\DocumentNumber;
 use App\Models\BatchStockBalance;
 use App\Models\InventoryLocation;
 use App\Models\Merchant;
@@ -14,7 +15,6 @@ use App\Models\StocktakeLine;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 final class OpenStocktake
 {
@@ -34,7 +34,7 @@ final class OpenStocktake
             $baselineMovementId = (int) StockMovement::query()->where('merchant_id', $merchant->id)->where('store_id', $store->id)->where('inventory_location_id', $location->id)->max('id');
             $stocktake = Stocktake::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'inventory_location_id' => $location->id, 'opened_by_user_id' => $actor->id,
-                'number' => 'CNT-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'state' => StocktakeState::Counting,
+                'number' => app(DocumentNumber::class)->next($merchant->id, 'CNT'), 'state' => StocktakeState::Counting,
                 'baseline_movement_id' => $baselineMovementId, 'opened_at' => now(), 'notes' => $notes,
             ]);
             $aggregate = $allBalances->filter(fn (StockBalance $balance): bool => ! $balance->variant->product->batch_tracking_enabled);

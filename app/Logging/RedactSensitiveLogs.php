@@ -2,7 +2,7 @@
 
 namespace App\Logging;
 
-use Monolog\Logger;
+use Illuminate\Log\Logger;
 use Monolog\LogRecord;
 
 class RedactSensitiveLogs

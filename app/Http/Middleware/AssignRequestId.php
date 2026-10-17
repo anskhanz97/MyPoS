@@ -17,6 +17,8 @@ class AssignRequestId
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $request->attributes->set('log_started_at', microtime(true));
+        Context::forgetHidden('log_scope');
         $requestId = (string) Str::uuid7();
         $request->attributes->set('request_id', $requestId);
         Context::add('request_id', $requestId);

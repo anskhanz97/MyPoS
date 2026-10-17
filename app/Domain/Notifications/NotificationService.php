@@ -4,6 +4,7 @@ namespace App\Domain\Notifications;
 
 use App\Jobs\SendNotificationEmail;
 use App\Jobs\SendNotificationMessage;
+use App\Logging\OperationalLogger;
 use App\Models\InAppAlert;
 use App\Models\Merchant;
 use App\Models\MerchantIntegration;
@@ -13,6 +14,8 @@ use App\Models\ReceiptSnapshot;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Context;
 
 final class NotificationService
 {
@@ -23,6 +26,9 @@ final class NotificationService
         $phone = $this->normalizePhone($phone);
         $provider = $channel === 'sms' ? 'twilio_sms' : 'meta_whatsapp';
         $integration = MerchantIntegration::query()->where('merchant_id', $merchant->id)->where('provider', $provider)->where('state', 'active')->first();
+        if (! $integration instanceof MerchantIntegration) {
+            app(OperationalLogger::class)->integration($provider, 'delivery.blocked', 'Receipt delivery was not queued because the channel is inactive.', ['merchant_id' => $merchant->id, 'store_id' => $receipt->store_id, 'subject' => 'receipt_snapshot:'.$receipt->public_id, 'status' => 'skipped', 'context' => ['reason_code' => 'integration_inactive']]);
+        }
         abort_unless($integration instanceof MerchantIntegration, 422, ucfirst($channel).' is not active for this merchant.');
         NotificationConsent::query()->updateOrCreate(['merchant_id' => $merchant->id, 'normalized_phone' => $phone, 'channel' => $channel, 'purpose' => 'transactional'], ['recorded_by_user_id' => $actor->id, 'state' => 'granted', 'source' => $consentSource, 'evidence_reference' => $evidenceReference, 'recorded_at' => now()]);
         $dedup = hash('sha256', implode("\x1f", ['receipt', $receipt->public_id, $channel, $phone]));
@@ -33,7 +39,7 @@ final class NotificationService
         }
         if ($delivery->wasRecentlyCreated || $delivery->state === 'failed') {
             $delivery->update(['state' => 'queued', 'failed_at' => null]);
-            SendNotificationMessage::dispatch($delivery->id);
+            Context::scope(fn () => Bus::dispatch(new SendNotificationMessage($delivery->id)), hidden: ['log_scope' => $delivery->logContext()]);
         }
 
         return $delivery->load('attempts');
@@ -62,7 +68,7 @@ final class NotificationService
             if ($delivery->state === 'failed') {
                 $delivery->update(['state' => 'queued']);
             }
-            SendNotificationEmail::dispatch($delivery->id);
+            Context::scope(fn () => Bus::dispatch(new SendNotificationEmail($delivery->id)), hidden: ['log_scope' => $delivery->logContext()]);
         }
 
         return $delivery->load('attempts');
@@ -72,7 +78,7 @@ final class NotificationService
     {
         abort_unless(filter_var($recipient, FILTER_VALIDATE_EMAIL) !== false, 422, 'Enter a valid test email address.');
         $delivery = NotificationDelivery::query()->create(['merchant_id' => $merchant->id, 'requested_by_user_id' => $actor->id, 'channel' => 'email', 'template_key' => 'settings_test', 'source_type' => 'merchant_email_setting', 'source_reference' => $merchant->public_id, 'recipient' => mb_strtolower($recipient), 'deduplication_key' => hash('sha256', 'test'."\x1f".$merchant->public_id."\x1f".$recipient."\x1f".now()->format('YmdHi')), 'state' => 'queued']);
-        SendNotificationEmail::dispatch($delivery->id);
+        Context::scope(fn () => Bus::dispatch(new SendNotificationEmail($delivery->id)), hidden: ['log_scope' => $delivery->logContext()]);
 
         return $delivery;
     }

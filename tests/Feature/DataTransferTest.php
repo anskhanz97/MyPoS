@@ -74,13 +74,14 @@ class DataTransferTest extends TestCase
         OperationalCustomer::query()->create(['merchant_id' => $fixture['merchant']->id, 'store_id' => null, 'local_reference' => 'CUS-1', 'name' => '=HYPERLINK("bad")', 'email' => 'safe@example.test', 'normalized_email' => 'safe@example.test', 'email_receipt_preference' => false, 'marketing_email_consent' => false, 'version' => 1]);
         $url = "/api/v1/merchants/{$fixture['merchant']->public_id}/exports";
         $payload = ['resource' => 'customers', 'store_id' => $fixture['store']->public_id];
-        $jobData = $this->actingAs($fixture['manager'])->postJson($url, $payload)->assertAccepted()->assertJsonPath('data.state', 'queued')->json('data');
+        $this->actingAs($fixture['manager'])->postJson($url, $payload)->assertForbidden();
+        $jobData = $this->actingAs($fixture['owner'])->postJson($url, $payload)->assertAccepted()->assertJsonPath('data.state', 'queued')->json('data');
         Queue::assertPushed(ProcessDataExport::class);
         $job = (new DataTransferJob)->resolveRouteBinding($jobData['public_id']);
         $this->assertInstanceOf(DataTransferJob::class, $job);
         app(ExportService::class)->execute($job);
         $download = "/api/v1/merchants/{$fixture['merchant']->public_id}/data-transfers/{$job->public_id}/download";
-        $content = $this->actingAs($fixture['manager'])->get($download)->assertOk()->streamedContent();
+        $content = $this->actingAs($fixture['owner'])->get($download)->assertOk()->streamedContent();
         $this->assertStringContainsString("'=HYPERLINK", $content);
         $this->assertStringNotContainsString("\nCUS-1,=HYPERLINK", $content);
         $this->actingAs($fixture['cashier'])->getJson("/api/v1/merchants/{$fixture['merchant']->public_id}/data-transfers/{$job->public_id}")->assertNotFound();

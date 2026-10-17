@@ -236,10 +236,10 @@ function recordSupplierPayment(): void {
                 <div class="receipt-context-grid">
                     <label>
                         Inventory location
-                        <select aria-label="Inventory location">
+                        <AppSelect aria-label="Inventory location">
                             <option>Main sellable stock</option>
                             <option>Quarantine</option>
-                        </select>
+                        </AppSelect>
                     </label>
                     <label>
                         Supplier reference

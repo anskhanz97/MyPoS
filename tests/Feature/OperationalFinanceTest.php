@@ -30,10 +30,15 @@ class OperationalFinanceTest extends TestCase
         $expense = $this->actingAs($f['cashier'])->withHeader('Idempotency-Key', $key)->postJson($base.'/expenses', $payload)->assertCreated()->json('data');
         $this->actingAs($f['cashier'])->withHeader('Idempotency-Key', $key)->postJson($base.'/expenses', $payload)->assertOk()->assertJsonPath('meta.replayed', true);
         $this->assertSame(1, CashMovement::query()->where('kind', 'expense')->count());
+        $reports = "/api/v1/merchants/{$f['merchant']->public_id}/reporting/reports/";
+        $range = '?start='.now()->toDateString().'&end='.now()->toDateString().'&store_id='.$f['store']->public_id;
+        $this->actingAs($f['owner'])->getJson($reports.'profit-loss'.$range)->assertOk()->assertJsonPath('data.summary.revenue', '0.00')->assertJsonPath('data.summary.recorded_expenses', '1200.00')->assertJsonPath('data.summary.operating_profit', '-1200.00');
         $this->actingAs($f['cashier'])->withHeader('Idempotency-Key', $key)->postJson($base.'/expenses', array_merge($payload, ['amount' => '1300.00']))->assertConflict();
         $this->actingAs($f['manager'])->withHeader('Idempotency-Key', (string) Str::uuid())->postJson($base.'/expenses/'.$expense['public_id'].'/corrections', ['reason' => 'Invoice was entered against wrong period'])->assertCreated();
         $this->assertSame(1, CashMovement::query()->where('kind', 'correction')->count());
         $this->assertSame('corrected', Expense::query()->findOrFail($expense['id'])->state);
+        $this->actingAs($f['owner'])->getJson($reports.'profit-loss'.$range)->assertOk()->assertJsonPath('data.summary.recorded_expenses', '0.00')->assertJsonPath('data.summary.operating_profit', '0.00');
+        $this->getJson($reports.'cash-flow-statement'.$range)->assertOk()->assertJsonPath('data.summary.cash_amount', '10000.00')->assertJsonPath('data.summary.external_recorded_amount', '0.00');
         Storage::fake('local');
         $bad = UploadedFile::fake()->create('malware.exe', 10, 'application/octet-stream');
         $this->actingAs($f['cashier'])->withHeader('Idempotency-Key', (string) Str::uuid())->post($base.'/expenses', array_merge($payload, ['payment_source' => 'external_recorded', 'cash_session_id' => null, 'attachment' => $bad]), ['Accept' => 'application/json'])->assertUnprocessable();
@@ -47,5 +52,9 @@ class OperationalFinanceTest extends TestCase
         $line = SettlementLine::query()->firstOrFail();
         $this->assertSame('0.00', $line->expected_amount);
         $this->assertSame('-1000.00', $line->difference_amount);
+        $reports = "/api/v1/merchants/{$f['merchant']->public_id}/reporting/reports/";
+        $range = '?start=2026-09-01&end=2026-09-30&store_id='.$f['store']->public_id;
+        $this->actingAs($f['owner'])->getJson($reports.'settlements'.$range)->assertOk()->assertJsonPath('data.summary.settled_amount', '980.00')->assertJsonPath('data.summary.fee_amount', '20.00')->assertJsonPath('data.summary.difference_amount', '-1000.00');
+        $this->getJson($reports.'cash-flow-statement'.$range)->assertOk()->assertJsonPath('data.summary.cash_amount', '0.00')->assertJsonPath('data.summary.settled_amount', '980.00');
     }
 }

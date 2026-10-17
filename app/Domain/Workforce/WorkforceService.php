@@ -162,7 +162,8 @@ final class WorkforceService
         abort_unless($end->greaterThanOrEqualTo($start), 422, 'Payroll period end must not precede its start.');
 
         return DB::transaction(function () use ($staff, $actor, $start, $end): PayrollInputSnapshot {
-            $existing = PayrollInputSnapshot::query()->where('staff_profile_id', $staff->id)->where('period_start', $start->toDateString())->where('period_end', $end->toDateString())->first();
+            $staff = StaffProfile::query()->lockForUpdate()->findOrFail($staff->id);
+            $existing = PayrollInputSnapshot::query()->where('staff_profile_id', $staff->id)->whereDate('period_start', $start->toDateString())->whereDate('period_end', $end->toDateString())->first();
             if ($existing instanceof PayrollInputSnapshot) {
                 return $existing;
             }
@@ -177,7 +178,7 @@ final class WorkforceService
             }
             $leave = LeaveRequest::query()->where('staff_profile_id', $staff->id)->where('state', 'approved')->where('starts_on', '<=', $end->toDateString())->where('ends_on', '>=', $start->toDateString())->sum('days');
             $unpaidLeave = LeaveRequest::query()->where('staff_profile_id', $staff->id)->where('state', 'approved')->where('starts_on', '<=', $end->toDateString())->where('ends_on', '>=', $start->toDateString())->whereHas('leaveType', fn ($query) => $query->where('is_paid', false))->sum('days');
-            $payload = ['staff_id' => $staff->public_id, 'employee_number' => $staff->employee_number, 'pay_basis' => $staff->pay_basis, 'base_pay' => $staff->base_pay, 'overtime_eligible' => $staff->overtime_eligible, 'worked_minutes' => $minutes, 'overtime_minutes' => $staff->overtime_eligible ? $overtime : 0, 'approved_leave_days' => (string) $leave, 'unpaid_leave_days' => (string) $unpaidLeave, 'attendance_shift_ids' => $shifts->pluck('public_id')->all()];
+            $payload = ['staff_id' => $staff->public_id, 'employee_number' => $staff->employee_number, 'staff_name' => $staff->display_name, 'default_store_id' => $staff->default_store_id, 'pay_basis' => $staff->pay_basis, 'base_pay' => $staff->base_pay, 'overtime_eligible' => $staff->overtime_eligible, 'worked_minutes' => $minutes, 'overtime_minutes' => $staff->overtime_eligible ? $overtime : 0, 'approved_leave_days' => (string) $leave, 'unpaid_leave_days' => (string) $unpaidLeave, 'attendance_shift_ids' => $shifts->pluck('public_id')->all()];
             $json = json_encode($payload, JSON_THROW_ON_ERROR);
 
             return PayrollInputSnapshot::query()->create(['merchant_id' => $staff->merchant_id, 'staff_profile_id' => $staff->id, 'frozen_by_user_id' => $actor->id, 'period_start' => $start, 'period_end' => $end, 'content_hash' => hash('sha256', $json), 'payload' => $payload, 'frozen_at' => now()]);

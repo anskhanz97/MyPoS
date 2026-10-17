@@ -2,6 +2,7 @@
 
 namespace App\Domain\Purchasing;
 
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\OutboxEvent;
 use App\Models\SecurityAuditEvent;
@@ -35,7 +36,7 @@ final class ReverseSupplierPayment
             }
             $reversal = SupplierPayment::query()->create([
                 'merchant_id' => $locked->merchant_id, 'store_id' => $locked->store_id, 'supplier_id' => $locked->supplier_id, 'recorded_by_user_id' => $actor->id,
-                'reverses_payment_id' => $locked->id, 'number' => 'SPR-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'entry_kind' => 'reversal',
+                'reverses_payment_id' => $locked->id, 'number' => app(DocumentNumber::class)->next($locked->merchant_id, 'SPR'), 'entry_kind' => 'reversal',
                 'idempotency_key' => $idempotencyKey, 'payload_hash' => $payloadHash, 'currency' => 'PKR', 'amount' => Decimal::fixed(BigDecimal::of($locked->amount)->negated(), 2),
                 'payment_method' => $locked->payment_method, 'reference' => $locked->reference, 'notes' => $reason, 'paid_at' => $effectiveAt,
             ]);

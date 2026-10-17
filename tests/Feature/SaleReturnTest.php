@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Auth\Actions\IssueApproval;
 use App\Domain\Auth\Actions\SwitchDeviceStaff;
 use App\Domain\Auth\Enums\Permission;
+use App\Domain\Shared\Math\Decimal;
 use App\Models\Approval;
 use App\Models\CashMovement;
 use App\Models\DeviceEnrollment;
@@ -58,7 +59,7 @@ class SaleReturnTest extends TestCase
         $this->actingAs($context['fixture']['cashier'])->withHeader('Idempotency-Key', (string) Str::uuid())->postJson($url, $payload)
             ->assertCreated()->assertJsonPath('data.lines.0.cumulative_quantity', '1.000000');
         $this->assertSame('fully_returned', Sale::query()->firstOrFail()->state);
-        $this->assertSame('1.000000', SaleReturnLine::query()->sum('quantity_uom'));
+        $this->assertSame('1.000000', Decimal::fixed(Decimal::of(SaleReturnLine::query()->sum('quantity_uom')), 6));
 
         $payload = $this->returnPayload($context['session']['id'], $lineId, '0.000001', '0.01');
         $this->actingAs($context['fixture']['cashier'])->withHeader('Idempotency-Key', (string) Str::uuid())->postJson($url, $payload)->assertConflict();

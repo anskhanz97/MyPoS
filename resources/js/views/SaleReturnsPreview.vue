@@ -15,7 +15,7 @@ const approved = ref(false);
 const posted = ref(false);
 const pending = ref(false);
 const announcement = ref("");
-const search = ref("SALE-7K29F4");
+const search = ref("SALE-20260927-00002");
 const quantityInput = ref<HTMLInputElement | null>(null);
 
 const refund = computed(() =>
@@ -126,7 +126,7 @@ function post(): void {
                     <div class="section-heading">
                         <div>
                             <p class="kicker">
-                                SALE-7K29F4 · 27 Sep 2026, 14:32
+                                SALE-20260927-00002 · 27 Sep 2026, 14:32
                             </p>
                             <h2 id="sale-title">Original sale · PKR 236.00</h2>
                             <p>Counter 01 · Cashier Hira · paid by cash</p>
@@ -177,7 +177,7 @@ function post(): void {
                                 :aria-invalid="invalidQuantity"
                         /></label>
                         <label
-                            >Stock disposition<select v-model="disposition">
+                            >Stock disposition<AppSelect v-model="disposition">
                                 <option value="restock">
                                     Restock to original location
                                 </option>
@@ -190,7 +190,7 @@ function post(): void {
                                 <option value="discard">
                                     Discard · no restock
                                 </option>
-                            </select></label
+                            </AppSelect></label
                         >
                     </div>
                     <p v-if="invalidQuantity" class="field-error" role="alert">
@@ -244,12 +244,12 @@ function post(): void {
                     <h2 id="refund-title">Refund PKR {{ refund }}</h2>
                 </div>
                 <label
-                    >Refund method<select v-model="refundMethod">
+                    >Refund method<AppSelect v-model="refundMethod">
                         <option value="cash">Cash · active drawer</option>
                         <option value="external_card">External card</option>
                         <option value="external_wallet">External wallet</option>
                         <option value="bank_transfer">Bank transfer</option>
-                    </select></label
+                    </AppSelect></label
                 >
                 <label v-if="refundMethod !== 'cash'"
                     >Actual confirmation reference<input
@@ -291,9 +291,10 @@ Customer changed their mind; packaging checked at counter.</textarea>
         >
             <div>
                 <p class="kicker">Linked document</p>
-                <h2 id="receipt-title">RET-P9X2LM</h2>
+                <h2 id="receipt-title">RET-20260927-00001</h2>
                 <p>
-                    Original SALE-7K29F4 · {{ quantity }} pc · {{ disposition }}
+                    Original SALE-20260927-00002 · {{ quantity }} pc ·
+                    {{ disposition }}
                 </p>
             </div>
             <div>

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Purchasing;
 
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\Merchant;
 use App\Models\OutboxEvent;
@@ -67,7 +68,7 @@ final class PostSupplierPayment
             }
             $payment = SupplierPayment::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'supplier_id' => $supplier->id, 'recorded_by_user_id' => $actor->id,
-                'number' => 'SPY-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'entry_kind' => 'payment', 'idempotency_key' => $idempotencyKey,
+                'number' => app(DocumentNumber::class)->next($merchant->id, 'SPY', $effectiveAt), 'entry_kind' => 'payment', 'idempotency_key' => $idempotencyKey,
                 'payload_hash' => $payloadHash, 'currency' => 'PKR', 'amount' => Decimal::fixed($paymentAmount, 2), 'payment_method' => $method,
                 'reference' => $reference, 'notes' => $notes, 'paid_at' => $effectiveAt,
             ]);

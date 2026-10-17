@@ -3,6 +3,7 @@
 namespace App\Domain\Inventory;
 
 use App\Domain\Inventory\Enums\StockTransferState;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\InventoryLocation;
 use App\Models\Merchant;
@@ -15,7 +16,6 @@ use App\Models\Store;
 use App\Models\User;
 use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 final class CreateStockTransfer
 {
@@ -31,7 +31,7 @@ final class CreateStockTransfer
             $transfer = StockTransfer::query()->create([
                 'merchant_id' => $merchant->id, 'source_store_id' => $source->id, 'destination_store_id' => $destination->id,
                 'source_inventory_location_id' => $sourceLocation->id, 'destination_inventory_location_id' => $destinationLocation->id,
-                'created_by_user_id' => $actor->id, 'number' => 'TR-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'state' => StockTransferState::Draft,
+                'created_by_user_id' => $actor->id, 'number' => app(DocumentNumber::class)->next($merchant->id, 'TR'), 'state' => StockTransferState::Draft,
                 'notes' => $notes,
             ]);
             foreach ($lines as $input) {

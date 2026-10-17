@@ -4,6 +4,10 @@ namespace App\Providers;
 
 use App\Domain\Fiscal\FbrDiV112Transport;
 use App\Domain\Fiscal\FiscalTransport;
+use App\Domain\Reporting\ReportSnapshots;
+use App\Logging\BuildIdentity;
+use App\Logging\OperationalLogger;
+use App\Logging\TrackRuntime;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -18,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(BuildIdentity::class);
+        $this->app->singleton(OperationalLogger::class);
+        $this->app->singleton(TrackRuntime::class);
         $this->app->bind(FiscalTransport::class, FbrDiV112Transport::class);
     }
 
@@ -26,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->app->make(ReportSnapshots::class)->register();
+        $this->app->make(TrackRuntime::class)->register();
         Model::preventLazyLoading(! $this->app->isProduction());
         RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)->by(
             Str::lower($request->string('email')->toString()).'|'.$request->ip(),

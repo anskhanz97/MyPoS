@@ -14,6 +14,7 @@ use App\Domain\Inventory\PostInventoryValuation;
 use App\Domain\Inventory\PostStockMovement;
 use App\Domain\Inventory\StockMovementCommand;
 use App\Domain\Loyalty\LoyaltyService;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\CashSession;
 use App\Models\Merchant;
@@ -145,7 +146,7 @@ final class PostSaleReturn
             $now = now();
             $return = SaleReturn::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id, 'cash_session_id' => $session->id, 'sale_id' => $lockedSale->id,
-                'created_by_user_id' => $actor->id, 'approval_id' => $approval?->id, 'number' => 'RET-'.mb_strtoupper(substr((string) Str::ulid(), -12)),
+                'created_by_user_id' => $actor->id, 'approval_id' => $approval?->id, 'number' => app(DocumentNumber::class)->next($merchant->id, 'RET', $session->business_date),
                 'state' => $pending ? 'refund_pending' : 'posted', 'idempotency_key' => $idempotencyKey, 'payload_hash' => $hash, 'reason' => trim((string) $data['reason']),
                 'late_reason' => $late ? trim((string) $data['late_reason']) : null, 'policy_window_days' => $policyDays, 'late_exception' => $late,
                 'business_date' => $session->business_date, 'subtotal' => Decimal::fixed($totals['pre_discount'], 2), 'discount_total' => Decimal::fixed($totals['discount'], 2),

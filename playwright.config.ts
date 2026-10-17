@@ -6,6 +6,6 @@ export default defineConfig({
     webServer: {
         command: "php artisan serve --host=127.0.0.1 --port=8173",
         url: "http://127.0.0.1:8173/up",
-        reuseExistingServer: false,
+        reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
     },
 });

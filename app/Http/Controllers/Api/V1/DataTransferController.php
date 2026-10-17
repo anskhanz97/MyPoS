@@ -6,6 +6,8 @@ use App\Domain\Auth\Enums\Permission;
 use App\Domain\Auth\RoleAuthorizer;
 use App\Domain\DataTransfer\ExportService;
 use App\Domain\DataTransfer\ImportService;
+use App\Domain\Reporting\ReportAccess;
+use App\Domain\Reporting\ReportSetupImport;
 use App\Http\Controllers\Controller;
 use App\Jobs\ProcessDataExport;
 use App\Models\DataTransferJob;
@@ -24,7 +26,7 @@ class DataTransferController extends Controller
     {
         $user = $this->user($request);
         abort_unless($store->merchant_id === $merchant->id, 404);
-        $data = $request->validate(['resource' => ['required', Rule::in(['catalog', 'customers', 'opening_stock'])], 'file' => ['required', 'file', 'max:5120']]);
+        $data = $request->validate(['resource' => ['required', Rule::in(['catalog', 'customers', 'opening_stock', 'reporting_catalog'])], 'file' => ['required', 'file', 'max:5120']]);
         $auth->authorize($user, $merchant, $this->importPermission($data['resource']), $store);
         $job = $service->upload($user, $merchant, $store, $data['resource'], $data['file']);
 
@@ -48,7 +50,11 @@ class DataTransferController extends Controller
         $store = isset($data['store_id']) ? (new Store)->resolveRouteBinding($data['store_id']) : null;
         abort_unless($store === null || $store instanceof Store, 404);
         abort_unless($store === null || $store->merchant_id === $merchant->id, 404);
-        $auth->authorize($user, $merchant, $store === null ? Permission::ReportConsolidated : Permission::ReportStore, $store);
+        $membership = $auth->authorize($user, $merchant, $store === null ? Permission::ReportConsolidated : Permission::ReportStore, $store);
+        abort_if($membership->role->value === 'cashier', 403, 'Data exports require a manager or owner.');
+        if ($data['resource'] === 'customers') {
+            $auth->authorize($user, $merchant, Permission::CustomerExport, $store);
+        }
         if ($data['resource'] === 'payroll' || ($data['resource'] === 'report' && ($data['report_key'] ?? null) === 'workforce')) {
             $auth->authorize($user, $merchant, Permission::PayrollManage);
         }
@@ -78,6 +84,7 @@ class DataTransferController extends Controller
     {
         $auth->authorize($this->user($request), $merchant, $this->importPermission($resource), $store);
         $headers = match ($resource) {
+            'reporting_catalog' => ReportSetupImport::HEADERS,
             'catalog' => ['sku', 'name', 'uom_code', 'product_type', 'batch_tracking'], 'customers' => ['local_reference', 'name', 'phone', 'email'], 'opening_stock' => ['sku', 'location_code', 'quantity', 'unit_cost', 'batch_code', 'expiry_date'], default => abort(404)
         };
 
@@ -93,8 +100,18 @@ class DataTransferController extends Controller
     {
         abort_unless($job->merchant_id === $merchant->id && $job->actor_user_id === $this->user($request)->id, 404);
         $store = $job->store_id === null ? null : Store::query()->findOrFail($job->store_id);
-        $auth->authorize($this->user($request), $merchant, $store === null ? Permission::ReportConsolidated : Permission::ReportStore, $store);
-        if ($job->resource === 'payroll') {
+        $membership = $auth->authorize($this->user($request), $merchant, $store === null ? Permission::ReportConsolidated : Permission::ReportStore, $store);
+        abort_if($membership->role->value === 'cashier' && $job->direction === 'export', 403, 'Data exports require a manager or owner.');
+        if ($job->resource === 'customers' && $job->direction === 'export') {
+            $auth->authorize($this->user($request), $merchant, Permission::CustomerExport, $store);
+        }
+        if ($job->resource === 'report_workspace') {
+            app(ReportAccess::class)->authorize($this->user($request), $merchant, $store, $job->optionsData()['report_key'], true);
+        }
+        if ($job->resource === 'report' && ($job->optionsData()['report_key'] ?? null) === 'sales') {
+            $auth->authorize($this->user($request), $merchant, Permission::ReportCosts, $store);
+        }
+        if ($job->resource === 'payroll' || ($job->resource === 'report' && ($job->optionsData()['report_key'] ?? null) === 'workforce')) {
             $auth->authorize($this->user($request), $merchant, Permission::PayrollManage);
         }
     }
@@ -102,7 +119,7 @@ class DataTransferController extends Controller
     private function importPermission(string $resource): Permission
     {
         return match ($resource) {
-            'catalog' => Permission::CatalogManage, 'customers' => Permission::CustomerManage, 'opening_stock' => Permission::InventoryManage, default => abort(404)
+            'catalog', 'reporting_catalog' => Permission::CatalogManage, 'customers' => Permission::CustomerManage, 'opening_stock' => Permission::InventoryManage, default => abort(404)
         };
     }
 

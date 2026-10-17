@@ -13,6 +13,14 @@ class NotificationDelivery extends Model
 {
     use HasBinaryPublicId;
 
+    /** @return array<string, mixed> */
+    public function logContext(): array
+    {
+        return ['merchant_id' => $this->merchant_id, 'store_id' => $this->store_id, 'actor_user_id' => $this->requested_by_user_id, 'provider' => match ($this->channel) {
+            'sms' => 'twilio_sms', 'whatsapp' => 'meta_whatsapp', default => 'smtp'
+        }, 'operation_id' => 'notification:'.$this->public_id, 'subject' => $this->source_type.':'.$this->source_reference];
+    }
+
     /** @return HasMany<NotificationAttempt,$this> */
     public function attempts(): HasMany
     {

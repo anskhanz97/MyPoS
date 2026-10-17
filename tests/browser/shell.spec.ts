@@ -5,6 +5,11 @@ async function openManagementSection(
     group: string,
     section: string,
 ): Promise<void> {
+    const mobileNavigation = page.getByRole("button", {
+        name: "Open navigation",
+        exact: true,
+    });
+    if (await mobileNavigation.isVisible()) await mobileNavigation.click();
     await page
         .getByRole("button", { name: `Open ${group} navigation` })
         .click();
@@ -208,7 +213,7 @@ test("sidebar controls remain available when collapsed and sample sections are r
     ).toBeVisible();
     await page.getByRole("button", { name: "Profile and logout" }).click();
     await expect(
-        page.getByRole("button", { name: "Log out", exact: true }),
+        page.getByRole("menuitem", { name: "Log out", exact: true }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Profile and logout" }).click();
     await edgeToggle.click();
@@ -274,7 +279,10 @@ test("return workflow preserves original allocations and exposes approval and pe
         page.getByRole("button", { name: "Approve this return" }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Approve this return" }).click();
-    await page.getByLabel("Refund method").selectOption("external_card");
+    await page.getByRole("combobox", { name: "Refund method" }).click();
+    await page
+        .getByRole("option", { name: "External card", exact: true })
+        .click();
     await page.getByLabel("Actual confirmation reference").fill("PENDING");
     await page.getByRole("button", { name: "Post return" }).click();
     await expect(page.getByText("External action pending")).toBeVisible();
@@ -618,7 +626,9 @@ test("inventory preview exposes negative stock, append-only sources, reconciliat
     await expect(stockOnHand.getByText("Loose almonds")).toBeVisible();
     await expect(stockOnHand.getByText("Green tea 250g")).toHaveCount(0);
     await stockOnHand.getByRole("button", { name: "Clear filters" }).click();
-    await expect(inventory.getByText("SALE-887 / LINE-2")).toBeVisible();
+    await expect(
+        inventory.getByText("SALE-20260927-00008 / LINE-2"),
+    ).toBeVisible();
     await inventory
         .getByRole("button", { name: "Confirm and rebuild projection" })
         .click();
@@ -669,7 +679,10 @@ test("batch preview distinguishes expiry warnings from blocks and proposes FEFO 
         inventory.getByText("Expiring soon", { exact: true }),
     ).toBeVisible();
     await inventory.getByLabel("Batch quantity").fill("7");
-    await inventory.getByLabel("Selection strategy").selectOption("fefo");
+    await inventory
+        .getByRole("combobox", { name: "Selection strategy" })
+        .click();
+    await page.getByRole("option", { name: "Earliest expiry first" }).click();
     await inventory
         .getByRole("button", { name: "Propose safe batches" })
         .click();
@@ -879,7 +892,7 @@ test("checkout preserves cart state across scanning, suspension, network loss an
     await openManagementSection(page, "Sell", "Checkout");
     const checkout = page.locator(".checkout-preview");
     await expect(
-        checkout.getByRole("heading", { name: "Checkout", exact: true }),
+        checkout.getByRole("heading", { name: "Current basket", exact: true }),
     ).toBeVisible();
     await expect(checkout.getByText("PKR 1290.92")).toBeVisible();
 
@@ -945,7 +958,7 @@ test("sale payment fully settles split tenders and reports each outcome truthful
     ).toBeVisible();
     await checkout.getByRole("button", { name: "Finalize sale" }).click();
     await expect(
-        checkout.getByRole("heading", { name: "SALE-01J8K7M42F" }),
+        checkout.getByRole("heading", { name: "SALE-20260927-00001" }),
     ).toBeVisible();
     await expect(checkout.getByText("Ready · version 1")).toBeVisible();
     await expect(checkout.getByText("Receipt printing")).toBeVisible();
@@ -991,15 +1004,17 @@ test("receipt printing keeps sale finality separate and recovers from helper fai
     ).toBeVisible();
     await expect(printing.getByText(/cannot change the sale/)).toBeVisible();
 
-    await printing.getByLabel("Simulate helper").selectOption("paper_out");
+    await printing.getByRole("combobox", { name: "Simulate helper" }).click();
+    await page.getByRole("option", { name: "Paper out", exact: true }).click();
     await printing.getByRole("button", { name: "Print original" }).click();
     await expect(printing.getByText("failed", { exact: true })).toBeVisible();
     await expect(printing.getByText(/sale is still posted/)).toBeVisible();
     await expect(
-        checkout.getByRole("heading", { name: "SALE-01J8K7M42F" }),
+        checkout.getByRole("heading", { name: "SALE-20260927-00001" }),
     ).toBeVisible();
 
-    await printing.getByLabel("Simulate helper").selectOption("ready");
+    await printing.getByRole("combobox", { name: "Simulate helper" }).click();
+    await page.getByRole("option", { name: "Ready", exact: true }).click();
     await printing.getByLabel("Reprint reason").fill("Customer requested copy");
     await printing.getByRole("button", { name: "Print marked copy" }).click();
     await expect(
@@ -1161,6 +1176,10 @@ test("only one checkout tab owns offline writes", async ({ page, context }) => {
     await expect(
         second.getByText("read-only tab", { exact: true }),
     ).toBeVisible();
+    await second
+        .getByRole("region", { name: "Durable offline queue" })
+        .locator("summary")
+        .click();
     await expect(
         second.getByRole("button", { name: "Queue offline cash sale" }),
     ).toBeDisabled();
@@ -1338,38 +1357,23 @@ test("operational finance keeps corrections and settlement provenance visible", 
     }
 });
 
-test("standard reports explain totals and preserve personal filters", async ({
+test("reports require authentication before showing business figures", async ({
     page,
 }) => {
-    await page.goto("/");
-    await openManagementSection(page, "Operations", "Reports");
-    const report = page.locator(".report-preview");
-    await expect(
-        report.getByRole("heading", {
-            name: "Every total leads back to its source.",
+    await page.route("**/api/v1/merchants", (route) =>
+        route.fulfill({
+            status: 401,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "Unauthenticated." }),
         }),
-    ).toBeVisible();
-    await report.getByRole("button", { name: "Save this filter" }).click();
-    await expect(report.getByRole("status")).toContainText(
-        "saved for your account only",
     );
-    await report.getByRole("button", { name: /Gross margin/ }).click();
+    await page.goto("/?report=sales-summary");
     await expect(
-        report.getByRole("heading", { name: "Gross margin" }),
+        page.getByRole("heading", { name: "Sign in to view reports" }),
     ).toBeVisible();
-    if (process.env.CAPTURE_VISUAL_EVIDENCE === "1") {
-        await page.screenshot({
-            path: "docs/evidence/t032-reporting-light.png",
-            fullPage: true,
-        });
-        await page.getByRole("button", { name: "Use dark mode" }).click();
-        await page.screenshot({
-            path: "docs/evidence/t032-reporting-dark.png",
-            fullPage: true,
-        });
-    }
+    await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
+    await expect(page.getByText("PKR 428,750")).toHaveCount(0);
 });
-
 test("imports preserve dry-run evidence and exports show durable status", async ({
     page,
 }) => {
@@ -1511,9 +1515,10 @@ test("checkout keeps optional controls in a dialog and outage details collapsed"
     await page.getByRole("button", { name: "Open checkout controls" }).click();
     await expect(dialog).toBeVisible();
     await expect(dialog.getByPlaceholder("Scan or type code")).toBeFocused();
-    await dialog
-        .getByRole("combobox", { name: /^Customer/ })
-        .selectOption("Sana Malik · Gold");
+    await dialog.getByRole("combobox", { name: /^Customer/ }).click();
+    await page
+        .getByRole("option", { name: "Sana Malik · Gold", exact: true })
+        .click();
     await expect(
         dialog.getByRole("button", { name: "Enable display" }),
     ).toBeVisible();

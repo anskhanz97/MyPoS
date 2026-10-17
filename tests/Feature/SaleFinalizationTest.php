@@ -43,6 +43,7 @@ class SaleFinalizationTest extends TestCase
         ], 'cash_change' => '12.00'];
         $posted = $this->actingAs($fixture['cashier'])->withHeader('Idempotency-Key', $key)->postJson($salesUrl, $payload)->assertCreated()->assertJsonPath('data.totals.gross', '118.00')->assertJsonPath('data.totals.cash_change', '12.00')->assertJsonFragment(['external_reference' => 'MANUAL-APPROVAL-42', 'confirmation_source' => 'staff_declaration'])->assertJsonPath('data.printing_state', 'not_requested');
         $saleId = $posted->json('data.id');
+        $this->assertMatchesRegularExpression('/^SALE-\d{8}-\d{5,}$/', $posted->json('data.number'));
         $this->assertSame(1, Sale::query()->count());
         $this->assertSame(2, SaleTender::query()->count());
         $this->assertSame(1, ReceiptSnapshot::query()->count());
@@ -54,6 +55,10 @@ class SaleFinalizationTest extends TestCase
         $this->assertSame(1, Sale::query()->count());
         $this->assertSame(1, StockMovement::query()->where('movement_kind', 'sale')->count());
         $this->assertSame(1, CashMovement::query()->where('kind', 'sale_cash')->count());
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $range = '?store_id='.$fixture['store']->public_id;
+        $this->actingAs($fixture['owner'])->getJson($reports.'sales-summary'.$range)->assertOk()->assertJsonPath('data.summary.revenue', '100.00')->assertJsonPath('data.summary.tax', '18.00')->assertJsonPath('data.summary.transactions', 1);
+        $this->getJson($reports.'tender-breakdown'.$range)->assertOk()->assertJsonPath('data.summary.amount', '118.00');
         $this->actingAs($fixture['cashier'])->getJson($salesUrl.'/client-transactions/'.$client)->assertOk()->assertJsonPath('data.id', $saleId);
         $changed = $payload;
         $changed['cash_change'] = '11.00';
@@ -111,6 +116,7 @@ class SaleFinalizationTest extends TestCase
         $payload = ['client_transaction_id' => (string) Str::uuid(), 'quote_id' => $quote['id'], 'quote_version' => $quote['quote_version'], 'register_session_id' => $session['id'], 'tenders' => [['tender_id' => (string) Str::uuid(), 'type' => 'cash', 'amount' => '112.10', 'confirmation_source' => 'not_applicable']], 'cash_change' => '0.00'];
         $this->actingAs($fixture['cashier'])->withHeader('Idempotency-Key', $key)->postJson($base.'/sales', $payload)->assertCreated()->assertJsonPath('data.totals.gross', '112.10');
         $this->assertSame(1, CouponUsage::query()->where('status', 'finalized')->count());
+        $this->actingAs($fixture['owner'])->getJson('/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/discount-usage?store_id='.$fixture['store']->public_id)->assertOk()->assertJsonPath('data.summary.discounts', '5.00');
         $this->actingAs($fixture['cashier'])->withHeader('Idempotency-Key', $key)->postJson($base.'/sales', $payload)->assertOk()->assertJsonPath('replayed', true);
         $this->assertSame(1, CouponUsage::query()->where('status', 'finalized')->count());
     }

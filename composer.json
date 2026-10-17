@@ -10,7 +10,8 @@
         "brick/math": "^1.0",
         "dompdf/dompdf": "^3.1.6",
         "laravel/framework": "^13.17",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "openspout/openspout": "^4.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -56,6 +57,7 @@
         "format": "pint --format agent",
         "scheduler": "@php artisan schedule:work",
         "worker": "@php artisan queue:work --tries=3 --timeout=90",
+        "worker:reports": "@php artisan queue:work reports --queue=reports --tries=3 --timeout=900",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

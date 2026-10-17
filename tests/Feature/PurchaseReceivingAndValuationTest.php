@@ -8,6 +8,7 @@ use App\Domain\Inventory\Enums\InventoryMovementKind;
 use App\Domain\Inventory\PostInventoryValuation;
 use App\Domain\Inventory\PostStockMovement;
 use App\Domain\Inventory\StockMovementCommand;
+use App\Domain\Shared\Math\Decimal;
 use App\Domain\Tenancy\Enums\MembershipRole;
 use App\Models\BatchStockBalance;
 use App\Models\InventoryCostBalance;
@@ -79,8 +80,8 @@ class PurchaseReceivingAndValuationTest extends TestCase
         $fixture = $this->fixture();
         $valuation = app(PostInventoryValuation::class);
         $stock = app(PostStockMovement::class);
-        $postInbound = function (string $reference, string $quantity, string $cost) use ($fixture, $valuation, $stock): void {
-            $valuation->inbound($fixture['store'], $fixture['variant'], InventoryCostEntryKind::AdjustmentIn, $quantity, $cost, 'valuation_fixture', $reference, 'main', now()->toIso8601String(), fn (string $unitCost, InventoryCostState $state) => $stock->handle(new StockMovementCommand($fixture['location'], $fixture['variant'], InventoryMovementKind::Adjustment, $quantity, 'valuation_fixture', $reference, unitCost: $unitCost, costState: $state))['movement']);
+        $postInbound = function (string $reference, string $quantity, string $cost, ?string $effectiveAt = null) use ($fixture, $valuation, $stock): void {
+            $valuation->inbound($fixture['store'], $fixture['variant'], InventoryCostEntryKind::AdjustmentIn, $quantity, $cost, 'valuation_fixture', $reference, 'main', $effectiveAt ?? now()->toIso8601String(), fn (string $unitCost, InventoryCostState $state) => $stock->handle(new StockMovementCommand($fixture['location'], $fixture['variant'], InventoryMovementKind::Adjustment, $quantity, 'valuation_fixture', $reference, unitCost: $unitCost, costState: $state))['movement']);
         };
         $postOutbound = function (string $reference, string $quantity) use ($fixture, $valuation, $stock): void {
             $valuation->outbound($fixture['store'], $fixture['variant'], InventoryCostEntryKind::SaleIssue, $quantity, 'valuation_fixture', $reference, 'main', now()->toIso8601String(), fn (?string $unitCost, InventoryCostState $state) => $stock->handle(new StockMovementCommand($fixture['location'], $fixture['variant'], InventoryMovementKind::Sale, '-'.$quantity, 'valuation_fixture', $reference, unitCost: $unitCost, costState: $state))['movement']);
@@ -104,6 +105,16 @@ class PurchaseReceivingAndValuationTest extends TestCase
         $this->assertSame('80.000000', $balance->average_unit_cost);
         $this->assertSame('160.000000', $balance->inventory_value);
         $this->assertSame(4, $balance->projection_version);
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $range = '?store_id='.$fixture['store']->public_id;
+        $owner = User::factory()->create();
+        MerchantMembership::factory()->owner()->for($fixture['merchant'])->for($owner)->create();
+        $this->actingAs($owner)->getJson($reports.'cost-adjustments'.$range)->assertOk()->assertJsonPath('data.summary.amount', '-90.00');
+        $this->getJson($reports.'stock-valuation'.$range)->assertOk()->assertJsonPath('data.summary.inventory_value', '160.00');
+        $this->getJson($reports.'sales-summary'.$range)->assertOk()->assertJsonPath('data.summary.revenue', '0.00');
+        $postInbound('BACKDATED', '1', '50', now()->subDays(40)->toIso8601String());
+        $this->getJson($reports.'cost-adjustments'.$range)->assertOk()->assertJsonFragment(['source_reference' => 'BACKDATED'])->assertJsonPath('data.pagination.total', 5);
+        $this->getJson($reports.'stock-valuation'.$range)->assertOk()->assertJsonPath('data.summary.inventory_value', '210.00');
     }
 
     public function test_batch_receiving_requires_expiry_and_routes_expired_goods_away_from_sellable_stock(): void
@@ -121,6 +132,10 @@ class PurchaseReceivingAndValuationTest extends TestCase
         $payload['location_id'] = $quarantine->public_id;
         $this->actingAs($fixture['manager'])->postJson($url, $payload)->assertCreated()->assertJsonPath('data.lines.0.batch.code', 'OLD-LOT');
         $this->assertDatabaseHas('batch_stock_balances', ['inventory_location_id' => $quarantine->id, 'quantity_base' => '12.000000']);
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $range = '?store_id='.$fixture['store']->public_id;
+        $this->getJson($reports.'batch-stock'.$range)->assertOk()->assertJsonPath('data.rows.0.disposition', 'quarantine')->assertJsonPath('data.rows.0.expiry_date', '2026-09-01');
+        $this->getJson($reports.'stock-warnings'.$range)->assertOk()->assertJsonPath('data.pagination.total', 1);
     }
 
     public function test_latest_receipt_reversal_restores_stock_cost_order_progress_and_supplier_charge(): void
@@ -137,12 +152,13 @@ class PurchaseReceivingAndValuationTest extends TestCase
         $this->actingAs($fixture['manager'])->postJson($url, ['reason' => 'Different reversal explanation'])->assertConflict();
         $this->assertSame('0.000000', StockBalance::query()->sole()->quantity_base);
         $this->assertSame('0.000000', InventoryCostBalance::query()->sole()->quantity_base);
-        $this->assertSame('0.00', SupplierChargeEntry::query()->sum('amount'));
+        $this->assertSame('0.00', Decimal::fixed(Decimal::of((string) SupplierChargeEntry::query()->sum('amount')), 2));
         $this->assertDatabaseCount('stock_movements', 2);
         $this->assertDatabaseCount('inventory_cost_entries', 2);
         $this->assertDatabaseCount('outbox_events', 2);
         $this->assertSame('0.000000', PurchaseOrder::query()->sole()->lines()->sole()->received_quantity_base);
         $this->assertSame('reversed', PurchaseReceipt::query()->sole()->status->value);
+        $this->actingAs($fixture['manager'])->getJson('/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/purchase-receipts?store_id='.$fixture['store']->public_id)->assertOk()->assertJsonPath('data.summary.amount', '0.00')->assertJsonPath('data.rows.0.status', 'reversed');
     }
 
     public function test_receipt_reversal_rejects_intervening_valuation_activity(): void
@@ -215,7 +231,8 @@ class PurchaseReceivingAndValuationTest extends TestCase
         $this->actingAs($fixture['manager'])->postJson($this->baseUrl($fixture).'/purchase-returns/'.$second->json('data.id').'/reverse', ['reason' => 'Supplier accepted goods locally; shipment cancelled'])->assertOk()->assertJsonPath('data.status', 'reversed');
         $this->assertSame('9.000000', StockBalance::query()->sole()->quantity_base);
         $this->assertSame('9.000000', InventoryCostBalance::query()->sole()->quantity_base);
-        $this->assertSame('0.00', SupplierCredit::query()->where('purchase_return_id', PurchaseReturn::query()->orderByDesc('id')->firstOrFail()->id)->sum('amount'));
+        $this->getJson('/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/purchase-returns?store_id='.$fixture['store']->public_id)->assertOk()->assertJsonPath('data.summary.amount', '375.00');
+        $this->assertSame('0.00', Decimal::fixed(Decimal::of((string) SupplierCredit::query()->where('purchase_return_id', PurchaseReturn::query()->orderByDesc('id')->firstOrFail()->id)->sum('amount')), 2));
     }
 
     public function test_supplier_credit_confirmation_payments_allocations_statement_and_reversal_are_exact(): void
@@ -225,6 +242,10 @@ class PurchaseReceivingAndValuationTest extends TestCase
         $receipt = $this->actingAs($fixture['manager'])->postJson($this->orderUrl($fixture).'/'.$order->public_id.'/receipts', $this->receiptPayload($fixture, $order, '00000000-0000-7000-8000-000000000202'))->assertCreated();
         $return = $this->actingAs($fixture['manager'])->postJson($this->baseUrl($fixture).'/purchase-receipts/'.$receipt->json('data.id').'/returns', ['idempotency_key' => '00000000-0000-7000-8000-000000000203', 'returned_at' => now()->toIso8601String(), 'reason' => 'Supplier requested one quarter carton back', 'credit_status' => 'expected', 'lines' => [['purchase_receipt_line_id' => $receipt->json('data.lines.0.id'), 'quantity' => '0.25']]])->assertCreated();
         $credit = SupplierCredit::query()->sole();
+        $reportBase = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $reportRange = '?store_id='.$fixture['store']->public_id;
+        $this->getJson($reportBase.'supplier-statement'.$reportRange)->assertOk()->assertJsonPath('data.summary.amount', '1500.00');
+        $this->getJson($reportBase.'supplier-credits'.$reportRange)->assertOk()->assertJsonPath('data.rows.0.status', 'expected');
         $this->actingAs($fixture['manager'])->postJson($this->baseUrl($fixture).'/supplier-credits/'.$credit->public_id.'/confirm', ['supplier_reference' => 'CN-900'])->assertOk()->assertJsonPath('data.status', 'confirmed');
         $charge = SupplierChargeEntry::query()->where('entry_kind', 'charge')->sole();
         $paymentsUrl = $this->baseUrl($fixture).'/suppliers/'.$fixture['supplier']->public_id.'/payments';
@@ -235,12 +256,20 @@ class PurchaseReceivingAndValuationTest extends TestCase
 
         $statementUrl = $this->baseUrl($fixture).'/suppliers/'.$fixture['supplier']->public_id.'/statement';
         $this->actingAs($fixture['manager'])->getJson($statementUrl)->assertOk()->assertJsonPath('data.charges', '1500.00')->assertJsonPath('data.confirmed_credits', '375.00')->assertJsonPath('data.payments', '500.00')->assertJsonPath('data.balance', '625.00')->assertJsonPath('data.unallocated_payments', '100.00');
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $range = '?store_id='.$fixture['store']->public_id;
+        $this->getJson($reports.'supplier-statement'.$range)->assertOk()->assertJsonPath('data.summary.amount', '625.00');
+        $this->getJson($reports.'supplier-credits'.$range)->assertOk()->assertJsonPath('data.summary.amount', '375.00');
+        $this->getJson($reports.'supplier-allocations'.$range)->assertOk()->assertJsonPath('data.summary.amount', '400.00');
         $this->actingAs($fixture['manager'])->postJson($paymentsUrl, [...$payload, 'idempotency_key' => '00000000-0000-7000-8000-000000000205', 'amount' => '1200.00', 'reference' => 'BANK-OVER', 'allocations' => [['supplier_charge_id' => $charge->public_id, 'amount' => '1200.00']]])->assertConflict();
 
         $reversePayload = ['idempotency_key' => '00000000-0000-7000-8000-000000000206', 'reason' => 'Bank advice was matched to another supplier', 'reversed_at' => now()->toIso8601String()];
         $reverseUrl = $this->baseUrl($fixture).'/supplier-payments/'.$payment->json('data.id').'/reverse';
         $this->actingAs($fixture['manager'])->postJson($reverseUrl, $reversePayload)->assertCreated()->assertJsonPath('data.amount', '-500.00')->assertJsonPath('data.allocated_amount', '-400.00');
         $this->actingAs($fixture['manager'])->postJson($reverseUrl, $reversePayload)->assertOk()->assertJsonPath('replayed', true);
+        $this->getJson($reports.'supplier-statement'.$range)->assertOk()->assertJsonPath('data.summary.amount', '1125.00');
+        $this->getJson($reports.'supplier-payments'.$range)->assertOk()->assertJsonPath('data.summary.amount', '0.00');
+        $this->getJson($reports.'supplier-allocations'.$range)->assertOk()->assertJsonPath('data.summary.amount', '0.00');
         $this->actingAs($fixture['manager'])->getJson($statementUrl)->assertOk()->assertJsonPath('data.balance', '1125.00')->assertJsonPath('data.unallocated_payments', '0.00');
         $this->assertDatabaseCount('supplier_payments', 2);
         $this->assertDatabaseCount('supplier_payment_allocations', 2);

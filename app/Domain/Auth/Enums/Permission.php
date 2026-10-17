@@ -36,6 +36,8 @@ enum Permission: string
     case ExpenseApprove = 'expense.approve';
     case ReportStore = 'report.store';
     case ReportConsolidated = 'report.consolidated';
+    case ReportCosts = 'report.costs';
+    case ReportFinancial = 'report.financial';
     case AuditView = 'audit.view';
     case ApprovalIssue = 'approval.issue';
 }

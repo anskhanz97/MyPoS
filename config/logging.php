@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\CreateDatabaseLogger;
 use App\Logging\RedactSensitiveLogs;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -53,9 +54,15 @@ return [
 
     'channels' => [
 
+        'database' => [
+            'driver' => 'custom',
+            'via' => CreateDatabaseLogger::class,
+            'level' => env('DB_LOG_LEVEL', 'info'),
+        ],
+
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => array_values(array_unique([...explode(',', (string) env('LOG_STACK', 'single')), 'database'])),
             'ignore_exceptions' => false,
         ],
 

@@ -130,12 +130,12 @@ function saveCustomer(): void {
                 </label>
                 <label class="field">
                     <span>Preview state</span>
-                    <select v-model="viewState">
+                    <AppSelect v-model="viewState">
                         <option value="populated">Populated</option>
                         <option value="empty">Empty</option>
                         <option value="loading">Loading</option>
                         <option value="error">Error</option>
-                    </select>
+                    </AppSelect>
                 </label>
                 <AppButton variant="quiet" @click="query = ''"
                     >Clear search</AppButton

@@ -3,6 +3,7 @@
 namespace App\Domain\Fiscal;
 
 use App\Jobs\SubmitFiscalDocument;
+use App\Logging\OperationalLogger;
 use App\Models\FiscalConfiguration;
 use App\Models\FiscalDocument;
 use App\Models\FiscalOutboxConsumption;
@@ -12,6 +13,8 @@ use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Models\SecurityAuditEvent;
 use App\Models\User;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
@@ -23,6 +26,8 @@ final class FiscalService
     {
         $config = $this->active($sale->merchant_id, $sale->store_id);
         if (! $config) {
+            app(OperationalLogger::class)->integration('fbr', 'fiscal.skipped', 'Fiscal submission is not required for this store.', ['merchant_id' => $sale->merchant_id, 'store_id' => $sale->store_id, 'subject' => 'sale:'.$sale->public_id, 'status' => 'skipped', 'context' => ['reason_code' => 'not_applicable']]);
+
             return null;
         }
 
@@ -33,6 +38,8 @@ final class FiscalService
     {
         $config = $this->active($return->merchant_id, $return->store_id);
         if (! $config) {
+            app(OperationalLogger::class)->integration('fbr', 'fiscal.skipped', 'Fiscal return submission is not required for this store.', ['merchant_id' => $return->merchant_id, 'store_id' => $return->store_id, 'subject' => 'sale_return:'.$return->public_id, 'status' => 'skipped', 'context' => ['reason_code' => 'not_applicable']]);
+
             return null;
         }
 
@@ -71,7 +78,7 @@ final class FiscalService
     {
         abort_unless($document->state === 'rejected', 409, 'Unknown outcomes must be reconciled, not blindly retried.');
         $document->update(['state' => 'queued']);
-        SubmitFiscalDocument::dispatch($document->id);
+        Context::scope(fn () => Bus::dispatch(new SubmitFiscalDocument($document->id)), hidden: ['log_scope' => $document->logContext()]);
 
         return $document->refresh();
     }
@@ -132,7 +139,7 @@ final class FiscalService
             return $existing;
         }
         $document = FiscalDocument::query()->create(['merchant_id' => $config->merchant_id, 'store_id' => $config->store_id, 'fiscal_configuration_id' => $config->id, 'local_document_type' => $type, 'local_document_reference' => $reference, 'local_document_number' => $number, 'state' => 'queued', 'payload_snapshot' => $payload, 'payload_hash' => $hash]);
-        SubmitFiscalDocument::dispatch($document->id);
+        Context::scope(fn () => Bus::dispatch(new SubmitFiscalDocument($document->id)), hidden: ['log_scope' => $document->logContext()]);
 
         return $document;
     }

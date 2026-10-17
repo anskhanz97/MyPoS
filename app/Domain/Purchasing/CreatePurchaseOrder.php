@@ -3,6 +3,7 @@
 namespace App\Domain\Purchasing;
 
 use App\Domain\Purchasing\Enums\PurchaseOrderState;
+use App\Domain\Shared\DocumentNumber;
 use App\Models\Merchant;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderLine;
@@ -10,7 +11,6 @@ use App\Models\Store;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 final class CreatePurchaseOrder
 {
@@ -25,7 +25,7 @@ final class CreatePurchaseOrder
         return DB::transaction(function () use ($merchant, $store, $supplier, $actor, $orderDate, $expectedDate, $sourceReference, $notes, $lines): PurchaseOrder {
             $order = PurchaseOrder::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'supplier_id' => $supplier->id, 'created_by_user_id' => $actor->id,
-                'number' => 'PO-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'state' => PurchaseOrderState::Draft,
+                'number' => app(DocumentNumber::class)->next($merchant->id, 'PO', $orderDate), 'state' => PurchaseOrderState::Draft,
                 'order_date' => $orderDate, 'expected_date' => $expectedDate, 'source_reference' => $sourceReference, 'notes' => $notes,
             ]);
             $dimensions = [];

@@ -219,13 +219,13 @@ function proposeBatches(): void {
                     /></label>
                     <label class="field"
                         ><span>Selection strategy</span
-                        ><select
+                        ><AppSelect
                             v-model="batchStrategy"
                             aria-label="Selection strategy"
                         >
                             <option value="fefo">Earliest expiry first</option>
                             <option value="manual">Manual batches</option>
-                        </select></label
+                        </AppSelect></label
                     >
                     <AppButton variant="primary" @click="proposeBatches"
                         >Propose safe batches</AppButton
@@ -263,12 +263,12 @@ function proposeBatches(): void {
                 /></label>
                 <label class="field"
                     ><span>Preview state</span
-                    ><select v-model="state">
+                    ><AppSelect v-model="state">
                         <option value="populated">Populated</option>
                         <option value="empty">Empty</option>
                         <option value="loading">Loading</option>
                         <option value="error">Error</option>
-                    </select></label
+                    </AppSelect></label
                 >
                 <AppButton variant="quiet" @click="query = ''"
                     >Clear filters</AppButton
@@ -371,7 +371,10 @@ function proposeBatches(): void {
                         >
                         <div>
                             <strong>Bundle component issue</strong
-                            ><small>Sale · SALE-887 / LINE-2 · MAIN</small>
+                            ><small
+                                >Sale · SALE-20260927-00008 / LINE-2 ·
+                                MAIN</small
+                            >
                         </div>
                     </li>
                     <li>
@@ -380,7 +383,7 @@ function proposeBatches(): void {
                         >
                         <div>
                             <strong>Return to quarantine</strong
-                            ><small>Return · RET-107 · QUAR</small>
+                            ><small>Return · RET-20260927-00003 · QUAR</small>
                         </div>
                     </li>
                 </ol>
@@ -434,14 +437,14 @@ function proposeBatches(): void {
             <div class="adjustment-form">
                 <label class="field"
                     ><span>Product</span
-                    ><select>
-                        <option>Green tea 250g · TEA-250</option></select
+                    ><AppSelect>
+                        <option>Green tea 250g · TEA-250</option></AppSelect
                     ><small>Base unit: piece</small></label
                 >
                 <label class="field"
                     ><span>Location</span
-                    ><select>
-                        <option>Main sellable stock · MAIN</option></select
+                    ><AppSelect>
+                        <option>Main sellable stock · MAIN</option></AppSelect
                     ><small>Sellable disposition</small></label
                 >
                 <label

@@ -14,6 +14,7 @@ use App\Models\ProductBatch;
 use App\Models\Sale;
 use App\Models\SaleReturn;
 use App\Models\StockBalance;
+use App\Models\Store;
 use App\Models\SupplierChargeEntry;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
@@ -23,6 +24,8 @@ use Illuminate\Database\Eloquent\Model;
 
 final class StandardReportService
 {
+    public function __construct(private readonly ReportQuery $workspace) {}
+
     public const KEYS = ['sales', 'inventory', 'purchasing', 'expenses', 'loyalty', 'workforce', 'cash'];
 
     /** @return array<string,mixed> */
@@ -46,9 +49,9 @@ final class StandardReportService
         $returns = $this->scoped(SaleReturn::query(), $merchantId, $storeId)->whereBetween('business_date', [$start, $end]);
         $gross = $this->sum($sales, 'total');
         $refunds = $this->sum($returns, 'total');
-        $cogs = BigDecimal::of((string) $this->scoped(InventoryCostEntry::query(), $merchantId, $storeId)->whereBetween('effective_at', [$start->startOfDay(), $end->endOfDay()])->where('source_type', 'sale')->sum('value_delta'))->abs()->toScale(2, RoundingMode::HalfUp);
+        $metrics = $this->workspace->run(Merchant::query()->findOrFail($merchantId), $storeId === null ? null : Store::query()->findOrFail($storeId), 'sales-summary', ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'per_page' => 1], ['actor_id' => null, 'costs' => true])['summary'];
 
-        return ['transactions' => (clone $sales)->count(), 'gross_sales' => $gross, 'discounts' => $this->sum(clone $sales, 'discount_total'), 'net_sales' => $this->sum(clone $sales, 'net_total'), 'tax' => $this->sum(clone $sales, 'tax_total'), 'refunds' => $refunds, 'sales_after_refunds' => $this->money(BigDecimal::of($gross)->minus($refunds)), 'cost_of_goods' => (string) $cogs, 'gross_margin' => $this->money(BigDecimal::of($gross)->minus($refunds)->minus($cogs)), 'drilldown' => (clone $sales)->latest('finalized_at')->limit(100)->get(['public_id', 'number', 'business_date', 'total'])->map(fn (Sale $s) => ['type' => 'sale', 'id' => $s->public_id, 'number' => $s->number, 'date' => $s->business_date->toDateString(), 'amount' => $s->total])->all(), 'limitations' => ['returns are recognized on return business date', 'provisional cost entries remain visible in valuation reports']];
+        return ['transactions' => (clone $sales)->count(), 'gross_sales' => $gross, 'discounts' => $this->sum(clone $sales, 'discount_total'), 'net_sales' => $this->sum(clone $sales, 'net_total'), 'tax' => $this->sum(clone $sales, 'tax_total'), 'refunds' => $refunds, 'sales_after_refunds' => $this->money(BigDecimal::of($gross)->minus($refunds)), 'cost_of_goods' => $metrics['cogs'], 'gross_margin' => $metrics['gross_profit'], 'drilldown' => (clone $sales)->latest('finalized_at')->limit(100)->get(['public_id', 'number', 'business_date', 'total'])->map(fn (Sale $s) => ['type' => 'sale', 'id' => $s->public_id, 'number' => $s->number, 'date' => $s->business_date->toDateString(), 'amount' => $s->total])->all(), 'limitations' => ['returns are recognized on return business date', 'provisional cost entries remain visible in valuation reports']];
     }
 
     /**
@@ -123,7 +126,7 @@ final class StandardReportService
     /** @return array<string,string> */
     private function definitions(string $key): array
     {
-        return ['gross_sales' => 'Posted sale total including tax before refunds.', 'net_sales' => 'Posted sale value excluding tax after line/cart discounts.', 'refunds' => 'Returns recognized on their own business date.', 'gross_margin' => 'Gross sales less same-period returns and recorded sale cost.', 'report_note' => 'Fixed '.$key.' definition; source documents remain authoritative.'];
+        return ['gross_sales' => 'Posted sale total including tax before refunds.', 'net_sales' => 'Posted sale value excluding tax after line/cart discounts.', 'refunds' => 'Returns recognized on their own business date.', 'gross_margin' => 'Revenue excluding tax less returns excluding tax and net recorded sale/restock costs.', 'report_note' => 'Fixed '.$key.' definition; source documents remain authoritative.'];
     }
 
     /**

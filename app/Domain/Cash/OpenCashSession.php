@@ -4,6 +4,7 @@ namespace App\Domain\Cash;
 
 use App\Domain\Cash\Enums\CashMovementKind;
 use App\Domain\Cash\Enums\CashSessionStatus;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\CashMovement;
 use App\Models\CashSession;
@@ -48,7 +49,7 @@ final class OpenCashSession
                 $session = CashSession::query()->create([
                     'merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id,
                     'opened_by_user_id' => $actor->id, 'current_custodian_user_id' => $actor->id,
-                    'number' => 'CS-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'status' => CashSessionStatus::Open,
+                    'number' => app(DocumentNumber::class)->next($merchant->id, 'CS', $when), 'status' => CashSessionStatus::Open,
                     'active_guard' => 1, 'open_idempotency_key' => $idempotencyKey, 'open_payload_hash' => $hash,
                     'business_date' => $when->toDateString(), 'opening_amount' => Decimal::fixed($amount, 2), 'opened_at' => $when,
                 ]);

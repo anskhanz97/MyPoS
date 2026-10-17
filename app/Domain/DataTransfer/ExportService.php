@@ -32,8 +32,15 @@ final class ExportService
             $merchant = Merchant::query()->findOrFail($job->merchant_id);
             $actor = User::query()->findOrFail($job->actor_user_id);
             $store = $job->store_id === null ? null : Store::query()->findOrFail($job->store_id);
-            $this->authorizer->authorize($actor, $merchant, $store === null ? Permission::ReportConsolidated : Permission::ReportStore, $store);
-            if ($job->resource === 'payroll') {
+            $membership = $this->authorizer->authorize($actor, $merchant, $store === null ? Permission::ReportConsolidated : Permission::ReportStore, $store);
+            abort_if($membership->role->value === 'cashier', 403, 'Data exports require a manager or owner.');
+            if ($job->resource === 'customers') {
+                $this->authorizer->authorize($actor, $merchant, Permission::CustomerExport, $store);
+            }
+            if ($job->resource === 'report' && ($job->optionsData()['report_key'] ?? null) === 'sales') {
+                $this->authorizer->authorize($actor, $merchant, Permission::ReportCosts, $store);
+            }
+            if ($job->resource === 'payroll' || ($job->resource === 'report' && ($job->optionsData()['report_key'] ?? null) === 'workforce')) {
                 $this->authorizer->authorize($actor, $merchant, Permission::PayrollManage);
             }
             [$headers, $rows] = $this->rows($job, $merchant, $store);

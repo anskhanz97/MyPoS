@@ -11,6 +11,7 @@ use App\Domain\Inventory\StockMovementCommand;
 use App\Domain\Purchasing\Enums\PurchaseReceiptStatus;
 use App\Domain\Purchasing\Enums\PurchaseReturnStatus;
 use App\Domain\Purchasing\Enums\SupplierCreditStatus;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\BatchStockBalance;
 use App\Models\Merchant;
@@ -96,7 +97,7 @@ final class PostPurchaseReturn
 
             $purchaseReturn = PurchaseReturn::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'supplier_id' => $locked->purchaseOrder->supplier_id, 'purchase_receipt_id' => $locked->id,
-                'inventory_location_id' => $locked->inventory_location_id, 'posted_by_user_id' => $actor->id, 'number' => 'PRN-'.mb_strtoupper(substr((string) Str::ulid(), -12)),
+                'inventory_location_id' => $locked->inventory_location_id, 'posted_by_user_id' => $actor->id, 'number' => app(DocumentNumber::class)->next($merchant->id, 'PRN', $effectiveAt),
                 'status' => PurchaseReturnStatus::Posted, 'idempotency_key' => $idempotencyKey, 'payload_hash' => $payloadHash, 'reason' => $reason,
                 'supplier_credit_reference' => $creditReference, 'credit_status' => $creditStatus, 'supplier_credit_total' => Decimal::fixed($creditTotal, 2),
                 'returned_at' => $effectiveAt, 'posted_at' => now(),

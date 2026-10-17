@@ -37,6 +37,10 @@ class WorkforceTest extends TestCase
         $this->assertSame(1800, $shift->break_seconds);
         $this->assertSame(4, AttendanceEvent::query()->count());
         $this->assertSame($staff->id, $shift->staff_profile_id);
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $range = '?start=2026-09-28&end=2026-09-29&store_id='.$fixture['store']->public_id;
+        $this->actingAs($fixture['manager'])->getJson($reports.'clock-in-out'.$range)->assertOk()->assertJsonPath('data.rows.0.worked_hours', fn ($hours) => (float) $hours === 7.5);
+        $this->getJson($reports.'attendance-logs'.$range)->assertOk()->assertJsonPath('data.pagination.total', 4);
     }
 
     public function test_leave_conflicts_balance_reversal_and_salary_privacy(): void
@@ -51,6 +55,7 @@ class WorkforceTest extends TestCase
         $this->actingAs($fixture['cashier'])->postJson($base.'/leave-requests', $payload)->assertConflict();
         $this->actingAs($fixture['manager'])->postJson($base.'/leave-requests/'.$leave['public_id'].'/decision', ['decision' => 'approved', 'reason' => 'Coverage arranged'])->assertOk();
         $this->assertSame('3.00', LeaveBalance::query()->firstOrFail()->used_days);
+        $this->getJson($base.'/reporting/reports/leave?start=2026-10-01&end=2026-10-03&store_id='.$fixture['store']->public_id)->assertOk()->assertJsonPath('data.rows.0.state', 'approved');
         $this->actingAs($fixture['cashier'])->postJson($base.'/leave-requests/'.$leave['public_id'].'/cancel', ['reason' => 'Plans changed'])->assertOk()->assertJsonPath('data.state', 'cancelled');
         $this->assertSame('0.00', LeaveBalance::query()->firstOrFail()->used_days);
         $this->assertSame(2, SecurityAuditEvent::query()->where('event_code', 'like', 'workforce.leave.%')->count());
@@ -78,6 +83,9 @@ class WorkforceTest extends TestCase
         $this->actingAs($fixture['manager'])->withHeader('Idempotency-Key', $key)->postJson($correctionUrl, $correction)->assertOk()->assertJsonPath('data.state', 'corrected');
         $this->actingAs($fixture['manager'])->withHeader('Idempotency-Key', $key)->postJson($correctionUrl, $correction)->assertOk();
         $this->assertSame(1, AttendanceEvent::query()->where('event_type', 'correction')->count());
+        $range = '?start=2026-09-10&end=2026-09-10&store_id='.$store;
+        $this->getJson('/api/v1/merchants/'.$merchant.'/reporting/reports/clock-in-out'.$range)->assertOk()->assertJsonPath('data.rows.0.worked_hours', fn ($hours) => (float) $hours === 7.5);
+        $this->getJson('/api/v1/merchants/'.$merchant.'/reporting/reports/rota'.$range)->assertOk()->assertJsonPath('data.pagination.total', 1);
 
         $freeze = "/api/v1/merchants/{$merchant}/staff/{$staff->public_id}/payroll-input-snapshots";
         $snapshot = $this->actingAs($fixture['owner'])->postJson($freeze, ['period_start' => '2026-09-01', 'period_end' => '2026-09-30'])->assertCreated()->json('data');

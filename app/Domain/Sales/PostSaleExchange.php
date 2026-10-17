@@ -2,6 +2,7 @@
 
 namespace App\Domain\Sales;
 
+use App\Domain\Shared\DocumentNumber;
 use App\Models\Merchant;
 use App\Models\Register;
 use App\Models\Sale;
@@ -10,7 +11,6 @@ use App\Models\Store;
 use App\Models\User;
 use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class PostSaleExchange
@@ -48,7 +48,7 @@ final class PostSaleExchange
             $direction = $difference->isPositive() ? 'customer_pays' : ($difference->isNegative() ? 'customer_refund' : 'even');
             $exchange = SaleExchange::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id, 'sale_return_id' => $returnResult['return']->id, 'new_sale_id' => $saleResult['sale']->id,
-                'created_by_user_id' => $actor->id, 'number' => 'EXC-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'idempotency_key' => $idempotencyKey, 'payload_hash' => $hash,
+                'created_by_user_id' => $actor->id, 'number' => app(DocumentNumber::class)->next($merchant->id, 'EXC'), 'idempotency_key' => $idempotencyKey, 'payload_hash' => $hash,
                 'difference_amount' => (string) $difference->abs()->toScale(2), 'difference_direction' => $direction, 'posted_at' => now(),
             ]);
 

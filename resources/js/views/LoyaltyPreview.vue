@@ -126,21 +126,21 @@ function previewReturn(): void {
                     </div>
                     <div class="ledger-row">
                         <div>
-                            <strong>Earn · SALE-WA83K</strong
+                            <strong>Earn · SALE-20260927-00003</strong
                             ><span>Gulberg · eligible net PKR 100.00</span>
                         </div>
                         <b class="positive">+10.0000</b>
                     </div>
                     <div class="ledger-row">
                         <div>
-                            <strong>Redeem · SALE-QP19M</strong
+                            <strong>Redeem · SALE-20260927-00004</strong
                             ><span>DHA · Rs 90 reward</span>
                         </div>
                         <b>−10.0000</b>
                     </div>
                     <div v-if="returned" class="ledger-row ledger-row--warning">
                         <div>
-                            <strong>Return reversal · RET-3J8N</strong
+                            <strong>Return reversal · RET-20260927-00002</strong
                             ><span
                                 >Original earned allocation reversed exactly
                                 once</span

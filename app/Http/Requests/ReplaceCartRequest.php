@@ -16,6 +16,7 @@ class ReplaceCartRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'change_reason' => ['nullable', 'string', 'max:500'],
             'expected_version' => ['required', 'integer', 'min:1'], 'customer_id' => ['nullable', 'uuid'],
             'coupon_codes' => ['sometimes', 'array', 'max:20'], 'coupon_codes.*' => ['required', 'string', 'max:80', 'distinct'],
             'manual_cart_discount' => ['sometimes', 'string', 'regex:/^(0|[1-9][0-9]{0,14})(\.[0-9]{1,2})?$/'],

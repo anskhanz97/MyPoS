@@ -105,7 +105,7 @@ final class PricingCalculator
             $totalNet = $totalNet->plus($net);
             $totalTax = $totalTax->plus($tax);
             $totalGross = $totalGross->plus($gross);
-            $output[] = ['line_id' => $line['line_id'], 'variant_id' => $line['variant']->public_id, 'sku' => $line['variant']->sku, 'quantity' => Decimal::fixed($line['quantity'], 6), 'unit_price' => Decimal::fixed($line['unit_price'], 4), 'pre_discount' => Decimal::fixed($line['pre_discount'], 2), 'discount' => Decimal::fixed($line['discount'], 2), 'net' => (string) $net, 'tax' => (string) $tax, 'gross' => (string) $gross, 'allocations' => $line['allocations']];
+            $output[] = ['line_id' => $line['line_id'], 'variant_id' => $line['variant']->public_id, 'sku' => $line['variant']->sku, 'quantity' => Decimal::fixed($line['quantity'], 6), 'unit_price' => Decimal::fixed($line['unit_price'], 4), 'pre_discount' => Decimal::fixed($line['pre_discount'], 2), 'discount' => Decimal::fixed($line['discount'], 2), 'net' => (string) $net, 'tax' => (string) $tax, 'gross' => (string) $gross, 'tax_rate_percent' => Decimal::fixed($line['tax_rate'], 6), 'allocations' => $line['allocations']];
         }
 
         return ['pricing_version' => $resolved['version'], 'mode' => $mode->value, 'currency' => 'PKR', 'quoted_at' => $at->toAtomString(), 'requires_reprice_on_version_change' => true, 'coupon_consumed' => false, 'loyalty_redemption' => $data['loyalty_redemption'] ?? null, 'lines' => $output, 'totals' => ['pre_discount' => Decimal::fixed($totalPre, 2), 'discount' => Decimal::fixed($totalDiscount, 2), 'net' => Decimal::fixed($totalNet, 2), 'tax' => Decimal::fixed($totalTax, 2), 'gross' => Decimal::fixed($totalGross, 2)]];

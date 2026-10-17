@@ -2,14 +2,18 @@
 
 namespace App\Domain\Integrations;
 
+use App\Logging\OperationalLogger;
 use App\Models\Merchant;
 use App\Models\MerchantEmailSetting;
 use App\Models\MerchantIntegration;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 final class IntegrationManager
 {
+    private ?string $testOperationId = null;
+
     public function __construct(private readonly IntegrationCatalog $catalog) {}
 
     /** @param array<string,mixed> $data */
@@ -35,6 +39,7 @@ final class IntegrationManager
             abort_if($missing !== [], 422, 'Complete these fields before activation: '.implode(', ', $missing).'.');
         }
         $integration->fill(['category' => $definition['category'], 'mode' => $data['mode'], 'state' => $data['state'], 'config' => $config, 'credentials' => $credentials ?: null, 'version' => $integration->exists ? $integration->version + 1 : 1])->save();
+        app(OperationalLogger::class)->integration($provider, 'configuration.saved', 'Integration settings saved.', ['merchant_id' => $merchant->id, 'status' => 'succeeded', 'subject' => 'integration:'.$integration->public_id, 'context' => ['mode' => $integration->mode, 'state' => $integration->state]]);
         if ($provider === 'smtp') {
             MerchantEmailSetting::query()->updateOrCreate(['merchant_id' => $merchant->id], ['enabled' => $integration->state === 'active', 'provider_label' => 'merchant SMTP', 'from_address' => (string) ($config['from_address'] ?? ''), 'from_name' => (string) ($config['from_name'] ?? '')]);
         }
@@ -54,6 +59,8 @@ final class IntegrationManager
     /** @return array{state:string,message:string} */
     public function test(MerchantIntegration $integration): array
     {
+        $this->testOperationId = 'integration-test:'.Str::uuid();
+        app(OperationalLogger::class)->integration($integration->provider, 'connection_test.started', 'Integration connection check started.', ['merchant_id' => $integration->merchant_id, 'operation_id' => $this->testOperationId, 'subject' => 'integration:'.$integration->public_id, 'status' => 'started', 'context' => ['mode' => $integration->mode]]);
         $config = (array) $integration->config;
         $credentials = (array) $integration->credentials;
         $missing = $this->missingRequired($integration->provider, $config, $credentials);
@@ -63,12 +70,17 @@ final class IntegrationManager
         if ($integration->mode !== 'live' || in_array($integration->provider, ['bank_transfer', 'raast', 'easypaisa', 'jazzcash', 'google_drive', 'microsoft_onedrive', 'smtp'], true)) {
             return $this->recordTest($integration, 'passed', $integration->mode === 'live' ? 'Configuration is complete. No message or payment was sent.' : 'Sandbox configuration is ready. No external request was made.');
         }
-        $response = match ($integration->provider) {
-            'twilio_sms' => Http::withBasicAuth($credentials['account_sid'], $credentials['auth_token'])->timeout(8)->get("https://api.twilio.com/2010-04-01/Accounts/{$credentials['account_sid']}.json"),
-            'meta_whatsapp' => Http::withToken($credentials['access_token'])->timeout(8)->get("https://graph.facebook.com/{$config['api_version']}/{$config['phone_number_id']}", ['fields' => 'display_phone_number,verified_name']),
-            'stripe' => Http::withToken($credentials['secret_key'])->timeout(8)->get('https://api.stripe.com/v1/account'),
-            default => null,
-        };
+        try {
+            $response = match ($integration->provider) {
+                'twilio_sms' => Http::withBasicAuth($credentials['account_sid'], $credentials['auth_token'])->timeout(8)->get("https://api.twilio.com/2010-04-01/Accounts/{$credentials['account_sid']}.json"),
+                'meta_whatsapp' => Http::withToken($credentials['access_token'])->timeout(8)->get("https://graph.facebook.com/{$config['api_version']}/{$config['phone_number_id']}", ['fields' => 'display_phone_number,verified_name']),
+                'stripe' => Http::withToken($credentials['secret_key'])->timeout(8)->get('https://api.stripe.com/v1/account'),
+                default => null,
+            };
+        } catch (\Throwable $exception) {
+            $this->recordTest($integration, 'failed', 'The provider could not be reached. Check connectivity and try again.');
+            throw $exception;
+        }
 
         return $this->recordTest($integration, $response?->successful() ? 'passed' : 'failed', $response?->successful() ? 'Provider accepted the credentials. No message or payment was sent.' : 'Provider rejected the connection. Check the saved credentials.');
     }
@@ -104,6 +116,7 @@ final class IntegrationManager
     private function recordTest(MerchantIntegration $integration, string $state, string $message): array
     {
         $integration->update(['last_test_state' => $state, 'last_test_message' => $message, 'last_tested_at' => now()]);
+        app(OperationalLogger::class)->integration($integration->provider, 'connection_test.'.$state, $message, ['merchant_id' => $integration->merchant_id, 'operation_id' => $this->testOperationId, 'subject' => 'integration:'.$integration->public_id, 'status' => $state === 'passed' ? 'succeeded' : 'failed', 'level' => $state === 'passed' ? 'info' : 'warning', 'context' => ['mode' => $integration->mode]]);
 
         return compact('state', 'message');
     }

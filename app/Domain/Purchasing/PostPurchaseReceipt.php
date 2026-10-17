@@ -11,6 +11,7 @@ use App\Domain\Inventory\PostStockMovement;
 use App\Domain\Inventory\StockMovementCommand;
 use App\Domain\Purchasing\Enums\PurchaseOrderState;
 use App\Domain\Purchasing\Enums\PurchaseReceiptStatus;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\InventoryLocation;
 use App\Models\Merchant;
@@ -79,7 +80,7 @@ final class PostPurchaseReceipt
             $charge = $merchandise->plus($landed)->plus($tax);
             $receipt = PurchaseReceipt::query()->create([
                 'merchant_id' => $merchant->id, 'store_id' => $store->id, 'purchase_order_id' => $locked->id, 'inventory_location_id' => $location->id,
-                'received_by_user_id' => $actor->id, 'number' => 'GRN-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'status' => PurchaseReceiptStatus::Posted,
+                'received_by_user_id' => $actor->id, 'number' => app(DocumentNumber::class)->next($merchant->id, 'GRN', $effectiveAt), 'status' => PurchaseReceiptStatus::Posted,
                 'idempotency_key' => $idempotencyKey, 'payload_hash' => $payloadHash, 'expected_order_version' => $expectedVersion,
                 'supplier_reference' => $supplierReference, 'notes' => $notes, 'received_at' => $effectiveAt, 'posted_at' => now(),
                 'merchandise_total' => Decimal::fixed($merchandise, 6), 'landed_cost_total' => Decimal::fixed($landed, 6),

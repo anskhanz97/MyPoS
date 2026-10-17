@@ -75,6 +75,10 @@ class OfflineReconciliationTest extends TestCase
         $this->assertSame(1, LoyaltyPointEntry::query()->where('kind', 'earn')->count());
         $this->assertSame(3, OfflineCommand::query()->sole()->attempt_count);
         $this->assertSame(0, $fixture['session']->refresh()->pending_offline_sale_count);
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        $range = '?store_id='.$fixture['store']->public_id;
+        $this->actingAs($fixture['owner'])->getJson($reports.'sales-summary'.$range)->assertOk()->assertJsonPath('data.summary.revenue', '100.00')->assertJsonPath('data.summary.transactions', 1);
+        $this->getJson($reports.'loyalty-activity'.$range)->assertOk()->assertJsonCount(1, 'data.rows')->assertJsonPath('data.rows.0.points', fn ($points) => (float) $points === 1.0);
     }
 
     public function test_identity_reuse_and_stale_fence_are_preserved_as_conflicts(): void

@@ -10,6 +10,8 @@ export type AppIconName =
     | "menu"
     | "collapse"
     | "search"
+    | "document"
+    | "alert"
     | "bell";
 
 defineProps<{ name: AppIconName }>();
@@ -26,7 +28,16 @@ defineProps<{ name: AppIconName }>();
         stroke-linejoin="round"
         aria-hidden="true"
     >
-        <template v-if="name === 'overview'">
+        <template v-if="name === 'document'">
+            <path
+                d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+            />
+            <path d="M14 3v6h6M8 13h8M8 17h5" />
+        </template>
+        <template v-else-if="name === 'alert'">
+            <path d="m12 3 10 18H2zM12 9v4M12 17h.01" />
+        </template>
+        <template v-else-if="name === 'overview'">
             <rect x="3" y="3" width="7" height="7" rx="1" />
             <rect x="14" y="3" width="7" height="7" rx="1" />
             <rect x="3" y="14" width="7" height="7" rx="1" />

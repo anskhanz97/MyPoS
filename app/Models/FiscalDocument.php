@@ -14,6 +14,12 @@ class FiscalDocument extends Model
 {
     use HasBinaryPublicId;
 
+    /** @return array<string, mixed> */
+    public function logContext(): array
+    {
+        return ['merchant_id' => $this->merchant_id, 'store_id' => $this->store_id, 'provider' => 'fbr', 'operation_id' => 'fiscal:'.$this->public_id, 'subject' => $this->local_document_type.':'.$this->local_document_reference];
+    }
+
     /** @return BelongsTo<FiscalConfiguration,$this> */
     public function configuration(): BelongsTo
     {

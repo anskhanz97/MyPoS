@@ -2569,6 +2569,76 @@ paths:
     post: {tags: [Fiscal], operationId: retryRejectedFiscalDocument, summary: Retry a rejected document with the same immutable identity; unknown outcomes are refused, responses: {'202': {description: Retry queued}, '409': {$ref: '#/components/responses/Conflict'}}}
   /merchants/{merchant}/fiscal-documents/{fiscalDocument}/reconcile:
     post: {tags: [Fiscal], operationId: reconcileUnknownFiscalDocument, summary: Record owner evidence from an official lookup or licensed integrator, responses: {'200': {description: Unknown outcome reconciled}, '409': {$ref: '#/components/responses/Conflict'}}}
+  /merchants/{merchant}/reporting/catalog:
+    get:
+      tags: [Reporting]
+      operationId: getReportingCatalog
+      summary: Return authorized fixed reports, store choices and filter lookups.
+      responses: {'200': {description: Role-scoped report catalogue}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /merchants/{merchant}/reporting/reports/{report}:
+    get:
+      tags: [Reporting]
+      operationId: getReportingWorkspaceResult
+      description: Live definition-version-2 result with typed columns, complete-filter summary, paginated rows, scope, period, freshness and limitations. Costs and margins are removed without permission. Cashiers are constrained to their own activity. Unknown historical dimensions are explicitly labelled.
+      parameters:
+        - {name: report, in: path, required: true, schema: {type: string}}
+        - {name: start, in: query, schema: {type: string, format: date}}
+        - {name: end, in: query, schema: {type: string, format: date}}
+        - {name: store_id, in: query, schema: {$ref: '#/components/schemas/Uuid'}}
+        - {name: page, in: query, schema: {type: integer, minimum: 1}}
+        - {name: per_page, in: query, schema: {type: integer, minimum: 1, maximum: 200, default: 50}}
+        - {name: sort, in: query, schema: {type: string}, description: Allowlisted result column.}
+        - {name: direction, in: query, schema: {enum: [asc, desc]}}
+        - {name: search, in: query, schema: {type: string, maxLength: 120}}
+        - {name: group_by, in: query, schema: {enum: [day, week, month, year]}}
+        - {name: comparison, in: query, schema: {enum: [previous_period, previous_year]}}
+      responses: {'200': {description: Report result envelope}, '403': {$ref: '#/components/responses/Forbidden'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /merchants/{merchant}/reporting/reports/{report}/rows:
+    get:
+      tags: [Reporting]
+      operationId: getReportingSourceRows
+      summary: Read paginated source lines using the same filters and group_key.
+      responses: {'200': {description: Authorized source rows}}
+  /merchants/{merchant}/reporting/reports/{report}/exports:
+    post:
+      tags: [Reporting]
+      operationId: queueReportingWorkspaceExport
+      description: Private export on dedicated reports queue. Maximum one million rows for CSV/XLSX, 2000 detail rows for PDF. Reauthorization occurs at request, processing and download. Artifacts expire after seven days.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format: {enum: [csv, xlsx, pdf]}
+                summary_only: {type: boolean, default: false}
+      responses: {'202': {description: Export job accepted}, '403': {$ref: '#/components/responses/Forbidden'}}
+  /merchants/{merchant}/reporting/exports:
+    get: {tags: [Reporting], operationId: listReportingExports, responses: {'200': {description: Current user's latest authorized export jobs}}}
+  /merchants/{merchant}/reporting/exports/{dataTransferJob}/download:
+    get: {tags: [Reporting], operationId: downloadReportingExport, responses: {'200': {description: Private CSV XLSX or PDF attachment}, '403': {$ref: '#/components/responses/Forbidden'}, '410': {description: Artifact expired}}}
+  /merchants/{merchant}/reporting/filters:
+    get: {tags: [Reporting], operationId: listWorkspaceFilters, responses: {'200': {description: Personal saved filters}}}
+    post: {tags: [Reporting], operationId: createWorkspaceFilter, responses: {'201': {description: Authorized personal filter saved}}}
+  /merchants/{merchant}/reporting/filters/{savedReportFilter}:
+    put: {tags: [Reporting], operationId: updateWorkspaceFilter, responses: {'200': {description: Personal filter updated after scope validation}}}
+    delete: {tags: [Reporting], operationId: deleteWorkspaceFilter, responses: {'200': {description: Personal filter deleted}}}
+  /merchants/{merchant}/reporting/setup:
+    get: {tags: [Reporting], operationId: getReportingSetup, responses: {'200': {description: Scoped lookup codes, registers, reorder policies and paginated products}}}
+  /merchants/{merchant}/reporting/setup/export.csv:
+    get: {tags: [Reporting], operationId: exportReportingMetadata, responses: {'200': {description: Import-compatible complete SKU metadata CSV}}}
+  /merchants/{merchant}/reporting/setup/{kind}:
+    post: {tags: [Reporting], operationId: createReportingClassification, responses: {'201': {description: Scoped classification created}}}
+  /merchants/{merchant}/reporting/setup/{kind}/{id}:
+    put: {tags: [Reporting], operationId: editReportingClassification, responses: {'200': {description: Classification renamed or archived without rewriting transaction history}}}
+  /merchants/{merchant}/reporting/products/{product}:
+    put: {tags: [Reporting], operationId: assignReportingProductMetadata, responses: {'200': {description: Current product classifications assigned}}}
+  /merchants/{merchant}/reporting/variants/{variant}:
+    put: {tags: [Reporting], operationId: assignReportingVariantMetadata, responses: {'200': {description: Size and store reorder policy saved}}}
+  /merchants/{merchant}/reporting/registers/{register}:
+    put: {tags: [Reporting], operationId: assignReportingRegisterGroup, responses: {'200': {description: Owner-authorized register group saved}}}
 components:
   securitySchemes:
     cookieAuth:

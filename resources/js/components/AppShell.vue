@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import AppDropdown from "./AppDropdown.vue";
 import type { Theme } from "../theme/themePreference";
 import AppIcon, { type AppIconName } from "./AppIcon.vue";
 import ThemeToggle from "./ThemeToggle.vue";
@@ -80,7 +81,7 @@ const navigationGroups: NavigationGroup[] = [
 const storedPanelState = localStorage.getItem("mypos.navigation.expanded");
 const panelExpanded = ref(storedPanelState !== "false");
 const mobileNavigationOpen = ref(false);
-const accountOpen = ref(false);
+
 const logoutBusy = ref(false);
 const accountMessage = ref("");
 const selectedGroupLabel = ref(
@@ -150,7 +151,6 @@ async function logout(): Promise<void> {
             },
         });
         if (response.ok || response.status === 401) {
-            accountOpen.value = false;
             selectSection("Access");
         } else {
             accountMessage.value = "Unable to log out. Please try again.";
@@ -203,7 +203,7 @@ async function logout(): Promise<void> {
                     </button>
                 </nav>
 
-                <div class="sidebar-tools" @keydown.esc="accountOpen = false">
+                <div class="sidebar-tools">
                     <button
                         type="button"
                         class="sidebar-tool"
@@ -217,28 +217,24 @@ async function logout(): Promise<void> {
                         :next-theme="nextTheme"
                         @toggle="$emit('toggleTheme')"
                     />
-                    <button
-                        type="button"
+                    <AppDropdown
                         class="sidebar-tool"
                         aria-label="Profile and logout"
-                        :aria-expanded="accountOpen"
-                        @click="accountOpen = !accountOpen"
                     >
-                        <span class="user-avatar">AK</span>
-                    </button>
-                    <div v-if="accountOpen" class="account-menu">
+                        <template #trigger
+                            ><span class="user-avatar">AK</span></template
+                        >
                         <strong>Ayesha Khan</strong>
                         <button
                             type="button"
-                            @click="
-                                selectSection('Access');
-                                accountOpen = false;
-                            "
+                            role="menuitem"
+                            @click="selectSection('Access')"
                         >
                             Profile
                         </button>
                         <button
                             type="button"
+                            role="menuitem"
                             :disabled="logoutBusy"
                             @click="logout"
                         >
@@ -247,7 +243,7 @@ async function logout(): Promise<void> {
                         <p v-if="accountMessage" role="alert">
                             {{ accountMessage }}
                         </p>
-                    </div>
+                    </AppDropdown>
                 </div>
             </div>
 

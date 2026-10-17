@@ -33,7 +33,7 @@ const reconciled = ref(false);
                 <div class="document">
                     <span class="mark ok">✓</span>
                     <div>
-                        <strong>SALE-93K2</strong
+                        <strong>SALE-20260927-00007</strong
                         ><small>Accepted · FBR-INV-1</small>
                     </div>
                     <span>12:42</span>
@@ -41,7 +41,7 @@ const reconciled = ref(false);
                 <div class="document">
                     <span class="mark no">×</span>
                     <div>
-                        <strong>SALE-93K1</strong
+                        <strong>SALE-20260927-00006</strong
                         ><small>Rejected · mapping 0042</small>
                     </div>
                     <AppButton variant="quiet">Review</AppButton>
@@ -49,7 +49,7 @@ const reconciled = ref(false);
                 <div class="document">
                     <span class="mark maybe">?</span>
                     <div>
-                        <strong>SALE-93J9</strong
+                        <strong>SALE-20260927-00005</strong
                         ><small>{{
                             reconciled
                                 ? "Accepted · reconciled"

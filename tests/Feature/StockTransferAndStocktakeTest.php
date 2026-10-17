@@ -54,6 +54,12 @@ class StockTransferAndStocktakeTest extends TestCase
         $this->actingAs($fixture['manager'])->postJson($url.'/receipts', array_replace($second, ['expected_version' => 4]))->assertConflict();
         $this->assertSame('5.000000', BatchStockBalance::query()->where('store_id', $fixture['destination']->id)->sole()->quantity_base);
         $this->assertSame(4, StockMovement::query()->count());
+        $reports = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/';
+        foreach ([$fixture['source'], $fixture['destination']] as $store) {
+            $range = '?store_id='.$store->public_id;
+            $this->actingAs($fixture['manager'])->getJson($reports.'sales-summary'.$range)->assertOk()->assertJsonPath('data.summary.revenue', '0.00');
+            $this->getJson($reports.'stock-history'.$range)->assertOk()->assertJsonPath('data.pagination.total', 1);
+        }
     }
 
     public function test_independent_transfer_requires_explicit_mapping_and_converts_units_and_batch_identity(): void
@@ -190,6 +196,8 @@ class StockTransferAndStocktakeTest extends TestCase
         $this->actingAs($fixture['manager'])->getJson($this->stocktakeUrl($fixture).'?state=counting')
             ->assertOk()->assertJsonCount(0, 'data');
         $this->assertSame('6.000000', StockBalance::query()->sole()->quantity_base);
+        $this->actingAs($fixture['manager'])->getJson('/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/stock-discrepancies?store_id='.$fixture['source']->public_id)->assertOk()->assertJsonPath('data.pagination.total', 1);
+        $this->getJson('/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/stock-history?store_id='.$fixture['source']->public_id)->assertOk()->assertJsonPath('data.rows.0.closing_quantity', fn ($quantity): bool => (float) $quantity === 6.0);
         $this->assertSame(4, StockMovement::query()->count());
     }
 

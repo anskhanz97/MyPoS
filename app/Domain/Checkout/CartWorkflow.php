@@ -8,6 +8,8 @@ use App\Domain\Checkout\Enums\CartStatus;
 use App\Domain\Inventory\Enums\InventoryDisposition;
 use App\Domain\Loyalty\LoyaltyService;
 use App\Domain\Pricing\PricingCalculator;
+use App\Domain\Reporting\ReportSnapshots;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\BatchSelectionSnapshot;
 use App\Models\Cart;
@@ -26,7 +28,6 @@ use App\Models\UnitOfMeasure;
 use App\Models\User;
 use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class CartWorkflow
@@ -37,7 +38,7 @@ final class CartWorkflow
     {
         $this->scope($merchant, $store, $register, $location);
 
-        return Cart::query()->create(['merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id, 'inventory_location_id' => $location->id, 'created_by_user_id' => $actor->id, 'last_edited_by_user_id' => $actor->id, 'reference' => 'CART-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'status' => CartStatus::Active, 'version' => 1, 'manual_cart_discount' => '0.00']);
+        return Cart::query()->create(['merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id, 'inventory_location_id' => $location->id, 'created_by_user_id' => $actor->id, 'last_edited_by_user_id' => $actor->id, 'reference' => app(DocumentNumber::class)->next($merchant->id, 'CART'), 'status' => CartStatus::Active, 'version' => 1, 'manual_cart_discount' => '0.00']);
     }
 
     /** @param array<string,mixed> $data */
@@ -53,11 +54,15 @@ final class CartWorkflow
                 abort_unless($customer instanceof OperationalCustomer && $customer->merchant_id === $locked->merchant_id && ($customer->store_id === null || $customer->store_id === $locked->store_id) && $customer->archived_at === null, 422, 'The customer is outside this cart store.');
                 $customerId = $customer->id;
             }
+            $reportSnapshots = app(ReportSnapshots::class);
+            $before = $reportSnapshots->cartQuantities($locked);
             $locked->lines()->delete();
             foreach ($data['lines'] as $sequence => $input) {
                 $this->addLine($locked, $input, $sequence + 1);
             }
             $locked->forceFill(['customer_id' => $customerId, 'coupon_codes' => array_values($data['coupon_codes'] ?? []), 'manual_cart_discount' => (string) ($data['manual_cart_discount'] ?? '0'), 'last_edited_by_user_id' => $actor->id, 'pricing_version' => null, 'version' => $locked->version + 1])->save();
+
+            $reportSnapshots->recordCartChanges($locked, $actor, $before, $data['change_reason'] ?? null);
 
             return $this->load($locked);
         });

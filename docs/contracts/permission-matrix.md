@@ -146,3 +146,11 @@ It excludes email, full identity/address, customer records, purchases, receipts,
 ## Required policy tests
 
 Every endpoint/command tests: anonymous access, wrong role, inactive membership, unauthorized store, another merchant's public ID, related-record substitution, stale approval, approval for another target, exported/background access and cache-key scope. A 404-style non-disclosure response is preferred where existence itself is sensitive.
+
+## Expanded reporting workspace
+
+Reports use `/reporting` merchant routes. Owners can consolidate across stores and view costs, financial worksheets, valuation and payroll. Managers are restricted to assigned stores and receive no cost or margin fields. Cashiers may view only their own sales summary, daily/product/employee/session activity, average transaction and payment-method reports; report exports are denied.
+
+`report.costs` and `report.financial` are separate permissions. Payroll requires `payroll.manage`; workforce requires `attendance.manage`; audit reports require `audit.view`. Identifiable customer report exports require `customer.export`. The fixed role map currently grants sensitive financial/cost/customer export capabilities to owners. Every export rechecks current membership and store assignment when queued, processed and downloaded. Legacy download routes apply the same restrictions.
+
+Reporting setup uses catalogue management permission in assigned scope; merchant-wide classifications and register-group assignment require owner authority. Metadata imports use the existing validate/commit workflow with resource `reporting_catalog`. Personal saved filters never grant access to their stored scope.

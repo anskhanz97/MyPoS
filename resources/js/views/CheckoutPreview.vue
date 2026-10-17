@@ -239,7 +239,7 @@ function finalizeSale(): void {
         saleStage.value = "posted";
         state.value = "suspended";
         announcement.value =
-            "Sale SALE-01J8K7M42F posted once. Receipt data is ready; printing was not requested.";
+            "Sale SALE-20260927-00001 posted once. Receipt data is ready; printing was not requested.";
     }, 250);
 }
 function keyboard(event: KeyboardEvent): void {
@@ -290,10 +290,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", keyboard));
                     </label>
                     <label class="customer-field">
                         <span>Customer</span>
-                        <select v-model="customer">
+                        <AppSelect v-model="customer">
                             <option>Walk-in customer</option>
                             <option>Sana Malik · Gold</option>
-                        </select>
+                        </AppSelect>
                     </label>
                     <button
                         class="staff-chip"
@@ -507,7 +507,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", keyboard));
                     <h2 id="payment-title">
                         {{
                             saleStage === "posted"
-                                ? "SALE-01J8K7M42F"
+                                ? "SALE-20260927-00001"
                                 : "Take payment"
                         }}
                     </h2>

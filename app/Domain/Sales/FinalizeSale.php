@@ -16,6 +16,7 @@ use App\Domain\Inventory\ValidateBatchSelectionSnapshot;
 use App\Domain\Loyalty\LoyaltyService;
 use App\Domain\Pricing\Enums\PromotionType;
 use App\Domain\Pricing\PricingVersionResolver;
+use App\Domain\Shared\DocumentNumber;
 use App\Domain\Shared\Math\Decimal;
 use App\Models\Cart;
 use App\Models\CartLine;
@@ -115,7 +116,7 @@ final class FinalizeSale
             }
 
             $when = now();
-            $sale = Sale::query()->create(['merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id, 'cash_session_id' => $session->id, 'cart_id' => $cart->id, 'cart_quote_id' => $quote->id, 'customer_id' => $cart->customer_id, 'created_by_user_id' => $actor->id, 'number' => 'SALE-'.mb_strtoupper(substr((string) Str::ulid(), -12)), 'state' => 'finalized', 'source' => $source, 'client_transaction_id' => $data['client_transaction_id'], 'idempotency_key' => $idempotencyKey, 'payload_hash' => $hash, 'pricing_version' => $quote->pricing_version, 'cart_version' => $cart->version, 'quote_version' => $quote->quote_version, 'business_date' => $session->business_date, 'subtotal' => $quote->payload['totals']['pre_discount'], 'discount_total' => $quote->payload['totals']['discount'], 'net_total' => $quote->payload['totals']['net'], 'tax_total' => $quote->payload['totals']['tax'], 'total' => $quote->payload['totals']['gross'], 'cash_change' => Decimal::fixed($change, 2), 'customer_snapshot' => $cart->customer === null ? null : ['id' => $cart->customer->public_id, 'name' => $cart->customer->name, 'phone' => $cart->customer->phone, 'email' => $cart->customer->email], 'finalized_at' => $when]);
+            $sale = Sale::query()->create(['merchant_id' => $merchant->id, 'store_id' => $store->id, 'register_id' => $register->id, 'cash_session_id' => $session->id, 'cart_id' => $cart->id, 'cart_quote_id' => $quote->id, 'customer_id' => $cart->customer_id, 'created_by_user_id' => $actor->id, 'number' => app(DocumentNumber::class)->next($merchant->id, 'SALE', $session->business_date), 'state' => 'finalized', 'source' => $source, 'client_transaction_id' => $data['client_transaction_id'], 'idempotency_key' => $idempotencyKey, 'payload_hash' => $hash, 'pricing_version' => $quote->pricing_version, 'cart_version' => $cart->version, 'quote_version' => $quote->quote_version, 'business_date' => $session->business_date, 'subtotal' => $quote->payload['totals']['pre_discount'], 'discount_total' => $quote->payload['totals']['discount'], 'net_total' => $quote->payload['totals']['net'], 'tax_total' => $quote->payload['totals']['tax'], 'total' => $quote->payload['totals']['gross'], 'cash_change' => Decimal::fixed($change, 2), 'customer_snapshot' => $cart->customer === null ? null : ['id' => $cart->customer->public_id, 'name' => $cart->customer->name, 'phone' => $cart->customer->phone, 'email' => $cart->customer->email], 'finalized_at' => $when]);
             $quoted = [];
             foreach ($quote->payload['lines'] as $quotedLine) {
                 if (is_array($quotedLine) && is_string($quotedLine['line_id'] ?? null)) {

@@ -71,8 +71,11 @@ class CashSessionTest extends TestCase
         $pending = $this->closePayload($session->refresh(), '100.00');
         $pending['pending_offline_sale_count'] = 1;
         $this->actingAs($fixture['manager'])->postJson($this->sessionUrl($fixture, $session).'/close', $pending)->assertOk()->assertJsonPath('data.state', 'close_pending_sync')->assertJsonPath('data.expected_amount', null);
+        $report = '/api/v1/merchants/'.$fixture['merchant']->public_id.'/reporting/reports/eod-variance?store_id='.$fixture['store']->public_id;
+        $this->getJson($report)->assertOk()->assertJsonPath('data.rows.0.expected_amount', null)->assertJsonPath('data.summary.expected_amount', null);
         $resolved = $this->closePayload($session->refresh(), '95.00');
         $this->actingAs($fixture['manager'])->postJson($this->sessionUrl($fixture, $session).'/close', $resolved)->assertOk()->assertJsonPath('data.state', 'variance_review')->assertJsonPath('data.expected_amount', '100.00')->assertJsonPath('data.variance', '-5.00');
+        $this->getJson($report)->assertOk()->assertJsonPath('data.rows.0.expected_amount', '100.00')->assertJsonPath('data.summary.expected_amount', '100.00');
 
         app(PostCashMovement::class)->handle($session->refresh(), $fixture['manager'], (string) Str::uuid(), CashMovementKind::SaleCash, '10.00', 'Late server sale', now()->toAtomString(), 'sale', (string) Str::uuid(), true);
         $this->assertSame('110.00', $session->refresh()->expected_amount);

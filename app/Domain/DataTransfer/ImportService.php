@@ -11,6 +11,7 @@ use App\Domain\Inventory\Enums\InventoryMovementKind;
 use App\Domain\Inventory\PostInventoryValuation;
 use App\Domain\Inventory\PostStockMovement;
 use App\Domain\Inventory\StockMovementCommand;
+use App\Domain\Reporting\ReportSetupImport;
 use App\Models\DataTransferJob;
 use App\Models\DataTransferRow;
 use App\Models\InventoryLocation;
@@ -28,11 +29,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 final class ImportService
 {
     private const HEADERS = [
+        'reporting_catalog' => ReportSetupImport::HEADERS,
         'catalog' => ['sku', 'name', 'uom_code', 'product_type', 'batch_tracking'],
         'customers' => ['local_reference', 'name', 'phone', 'email'],
         'opening_stock' => ['sku', 'location_code', 'quantity', 'unit_cost', 'batch_code', 'expiry_date'],
@@ -52,7 +55,7 @@ final class ImportService
         abort_if(($file->getSize() ?: 0) > 5 * 1024 * 1024, 422, 'Import files cannot exceed 5 MB.');
         $content = file_get_contents($file->getRealPath());
         abort_unless(is_string($content) && mb_check_encoding($content, 'UTF-8'), 422, 'The CSV must be valid UTF-8.');
-        $hash = hash('sha256', $content);
+        $hash = hash('sha256', $content.($resource === 'reporting_catalog' ? '|store:'.$store->id.'|actor:'.$actor->id : ''));
         $existing = DataTransferJob::query()->where('merchant_id', $merchant->id)->where('resource', $resource)->where('source_hash', $hash)->first();
         if ($existing instanceof DataTransferJob) {
             return $existing->load('rows');
@@ -94,6 +97,7 @@ final class ImportService
             foreach ($locked->rows()->orderBy('row_number')->get() as $row) {
                 $payload = $row->payloadData();
                 $reference = match ($locked->resource) {
+                    'reporting_catalog' => app(ReportSetupImport::class)->commit($merchant, $store, $payload),
                     'catalog' => $this->commitCatalog($merchant, $store, $payload),
                     'customers' => $this->commitCustomer($actor, $merchant, $store, $payload),
                     'opening_stock' => $this->commitOpeningStock($actor, $merchant, $store, $locked, $row->row_number, $payload),
@@ -126,6 +130,9 @@ final class ImportService
             $payload = [];
             foreach ($headers as $index => $header) {
                 $payload[$header] = trim((string) $values[$index]);
+                if ($job->resource === 'reporting_catalog') {
+                    $payload[$header] = ReportSetupImport::decodeCsvCell($payload[$header]);
+                }
             }
             $errors = $this->rowErrors($job->resource, $payload, $merchant, $store, $seen);
             $isValid = $errors === [];
@@ -139,14 +146,14 @@ final class ImportService
 
     /**
      * @param  array<string,string>  $row
-     * @param  array<string,bool>  $seen
+     * @param  array<string,bool|string>  $seen
      * @return list<string>
      */
     private function rowErrors(string $resource, array $row, Merchant $merchant, Store $store, array &$seen): array
     {
         $errors = [];
         $key = match ($resource) {
-            'catalog' => mb_strtoupper($row['sku']),
+            'catalog', 'reporting_catalog' => mb_strtoupper($row['sku']),
             'opening_stock' => mb_strtoupper($row['sku'].'|'.$row['location_code'].'|'.$row['batch_code']),
             default => mb_strtoupper($row['local_reference']),
         };
@@ -157,6 +164,21 @@ final class ImportService
             $errors[] = 'duplicate key in file';
         }
         $seen[$key] = true;
+        if ($resource === 'reporting_catalog') {
+            try {
+                $resolved = app(ReportSetupImport::class)->resolve($merchant, $store, $row);
+                $productKey = 'product:'.$resolved['variant']->product_id;
+                $metadata = json_encode($resolved['product'], JSON_THROW_ON_ERROR);
+                if (isset($seen[$productKey]) && $seen[$productKey] !== $metadata) {
+                    $errors[] = 'Variants of the same product must use identical product classifications.';
+                }
+                $seen[$productKey] = $metadata;
+            } catch (ValidationException $e) {
+                $errors = array_merge($errors, $e->validator->errors()->all());
+            }
+
+            return array_values($errors);
+        }
         if ($resource === 'catalog') {
             if ($row['name'] === '') {
                 $errors[] = 'name is required';
@@ -167,7 +189,7 @@ final class ImportService
             if (! in_array(strtolower($row['batch_tracking']), ['yes', 'no', '1', '0'], true)) {
                 $errors[] = 'batch_tracking must be yes or no';
             }
-            if (! UnitOfMeasure::query()->where('merchant_id', $merchant->id)->where('code', mb_strtoupper($row['uom_code']))->exists()) {
+            if (! UnitOfMeasure::query()->where('merchant_id', $merchant->id)->whereRaw('UPPER(code) = ?', [mb_strtoupper($row['uom_code'])])->exists()) {
                 $errors[] = 'unknown uom_code';
             }
             if ($this->variantQuery($merchant, $store, $key)->exists()) {
@@ -213,7 +235,7 @@ final class ImportService
     {
         $scopeStore = $this->catalogScope->storeId($merchant, $store);
         $product = Product::query()->create(['merchant_id' => $merchant->id, 'store_id' => $scopeStore, 'type' => $row['product_type'], 'name' => $row['name'], 'batch_tracking_enabled' => in_array(strtolower((string) $row['batch_tracking']), ['yes', '1'], true), 'structure_version' => 1]);
-        $unit = UnitOfMeasure::query()->where('merchant_id', $merchant->id)->where('code', mb_strtoupper((string) $row['uom_code']))->firstOrFail();
+        $unit = UnitOfMeasure::query()->where('merchant_id', $merchant->id)->whereRaw('UPPER(code) = ?', [mb_strtoupper((string) $row['uom_code'])])->firstOrFail();
         $variant = ProductVariant::query()->create(['merchant_id' => $merchant->id, 'store_id' => $scopeStore, 'product_id' => $product->id, 'base_unit_id' => $unit->id, 'sku' => mb_strtoupper((string) $row['sku']), 'name' => $row['name'], 'is_weighted' => $row['product_type'] === ProductType::Weighted->value, 'is_default' => true]);
         if ($scopeStore === null) {
             ProductStoreAvailability::query()->create(['merchant_id' => $merchant->id, 'store_id' => $store->id, 'product_id' => $product->id, 'is_available' => true]);

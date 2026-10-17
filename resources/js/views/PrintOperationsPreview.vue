@@ -67,7 +67,7 @@ function requestPrint(copy: "original" | "reprint"): void {
         <div class="print-grid">
             <article class="receipt-slip" aria-label="Frozen receipt preview">
                 <div class="receipt-brand">MY POS · COUNTER 01</div>
-                <p>SALE-01J8K7M42F</p>
+                <p>SALE-20260927-00001</p>
                 <div><span>Karak tea × 2</span><strong>PKR 360.00</strong></div>
                 <div>
                     <span>Classic burger + extras</span
@@ -89,11 +89,11 @@ function requestPrint(copy: "original" | "reprint"): void {
                     </div>
                     <label>
                         Simulate helper
-                        <select v-model="helper">
+                        <AppSelect v-model="helper">
                             <option value="ready">Ready</option>
                             <option value="unavailable">Unavailable</option>
                             <option value="paper_out">Paper out</option>
-                        </select>
+                        </AppSelect>
                     </label>
                 </div>
                 <div class="operation-state" role="status" aria-live="polite">

@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Logging\RedactSensitiveLogs;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Monolog\Handler\TestHandler;
+use Monolog\Logger;
 use Tests\TestCase;
 
 class ProductionHardeningTest extends TestCase
@@ -68,5 +71,19 @@ class ProductionHardeningTest extends TestCase
         $this->assertSame('[REDACTED]', $redacted['nested']['bearer_token']);
         $this->assertSame('card [REDACTED_CARD]', $redacted['nested']['note']);
         $this->assertSame('kept', $redacted['safe']);
+    }
+
+    public function test_configured_logging_channel_applies_redaction_without_falling_back_to_emergency_logging(): void
+    {
+        config(['logging.channels.redaction_probe' => ['driver' => 'monolog', 'handler' => TestHandler::class, 'tap' => [RedactSensitiveLogs::class]]]);
+        $logger = Log::channel('redaction_probe');
+        $logger->warning('Redaction probe', ['password' => 'sensitive-value', 'safe' => 'kept']);
+        $monolog = $logger->getLogger();
+        $this->assertInstanceOf(Logger::class, $monolog);
+        $handler = $monolog->getHandlers()[0];
+        $this->assertInstanceOf(TestHandler::class, $handler);
+        $record = $handler->getRecords()[0];
+        $this->assertSame('[REDACTED]', $record->context['password']);
+        $this->assertSame('kept', $record->context['safe']);
     }
 }

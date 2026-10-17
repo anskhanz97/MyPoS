@@ -7,7 +7,11 @@ import CheckoutPreview from "./views/CheckoutPreview.vue";
 import CustomerDisplayWindow from "./views/CustomerDisplayWindow.vue";
 
 const shell = ref<ShellKind>("management");
-const activeSection = ref("Tenancy");
+const activeSection = ref(
+    new URL(window.location.href).searchParams.has("report")
+        ? "Reports"
+        : "Tenancy",
+);
 const previousManagementSection = ref("Tenancy");
 const themePreference = useThemePreference();
 const currentTheme = themePreference.theme;
